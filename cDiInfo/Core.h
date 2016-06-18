@@ -8,6 +8,7 @@
 
 // Local includes
 #include "Enumerations.h"
+#include "Registry.h"
 #include "Strings.h"
 
 // STL includes
@@ -20,6 +21,10 @@
 // WinApi Includes
 #include <Windows.h>
 #include <cfgmgr32.h>
+#pragma warning ( push )
+#pragma warning( disable: 4091 )
+#include <Ntddscsi.h> // Disable the warning this throws
+#pragma warning( pop )
 #include <SetupAPI.h>
 
 // An AttributeMap is a map of string to string
@@ -52,7 +57,7 @@ std::string getDeviceId(DEVINST &devInst);
 
 // Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
 //   this is a collection of 'attributes'
-AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo);
+AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
 
 // Gets a vector of interfaces based on the given GUID. If the GUID is GUID_NULL, all DEVINTERFACE GUIDs will be used
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid);
@@ -68,3 +73,6 @@ AttributeMap getAttributeMapWith(std::string key, std::string value);
 
 // Gets a DEVINST that has a matching key and value in it's AttributeMap
 DEVINST getDevInstWith(std::string &key, std::string &value);
+
+// Gets a mapping from SCSI port to device id
+std::map<int, std::string> getScsiPortToDeviceIdMap();

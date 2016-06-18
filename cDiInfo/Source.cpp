@@ -8,6 +8,7 @@
 #include "Core.h"
 #include "Enumerations.h"
 #include "Features.h"
+#include "Registry.h"
 #include "Source.h"
 #include "Strings.h"
 
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
     if (argc == 2 && std::string(argv[1]) == "-a")
     {
         printAllInfo();
-    }
+    }  
     else if (argc == 4 && std::string(argv[1]) == "-disable")
     {
         STATUS s = disableDevice(argv[2], argv[3]);

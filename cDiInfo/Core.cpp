@@ -108,7 +108,7 @@ bool getDriverInfoData(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, PSP_DRVINFO_DAT
 
     deviceInstallParams.FlagsEx |= (DI_FLAGSEX_INSTALLEDDRIVER | DI_FLAGSEX_ALLOWEXCLUDEDDRVS);
 
-    if (SetupDiSetDeviceInstallParams(devs, &devInfo, &deviceInstallParams)) 
+    if (SetupDiSetDeviceInstallParams(devs, &devInfo, &deviceInstallParams))
     {
         //
         // we were able to specify this flag, so proceed the easy way
@@ -139,12 +139,12 @@ std::string getDeviceId(DEVINST &devInst)
     if (CM_Get_Device_ID(devInst, (char*)(deviceId.c_str()), deviceIdSize + 1, 0) == CR_SUCCESS)
     {
         deviceId[deviceIdSize] = ' ';
-        return deviceId;
+        return rTrim(deviceId);
     }
     return UNAVAILABLE_ATTRIBUTE;
 }
 
-AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo)
+AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap)
 {
     AttributeMap devAttrMap;
 
@@ -271,6 +271,16 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo)
         addToMap(devAttrMap, DriverType);
     }
 
+    // Try to get SCSI port info
+    for (auto &scsiPortToDeviceId : scsiPortToDeviceIdMap)
+    {
+        if (toUpper(scsiPortToDeviceId.second) == toUpper(DeviceId))
+        {
+            std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiPortToDeviceId.first) + ":";
+            addToMap(devAttrMap, ScsiAdapterPath);
+        }
+    }
+
     // Try to save the SP_DEVINFO_DATA... a bit sketchy but works!
     std::string __devInfoDataString(sizeof(SP_DEVINFO_DATA), '0');
     memcpy((void*)__devInfoDataString.c_str(), &devInfo, sizeof(SP_DEVINFO_DATA));
@@ -344,11 +354,71 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
         interfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)buffer;
         interfaceDetail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 
+        std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
+
         if (SetupDiGetDeviceInterfaceDetail(interfaceDevs, &interfaceInfo, interfaceDetail, size, NULL, &devInfo))
         {
-            AttributeMap devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo);
-            std::string devicePath = interfaceDetail->DevicePath;
-            addToMap(devAttrMap, devicePath);
+            AttributeMap devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
+            std::string DevicePath = interfaceDetail->DevicePath;
+            addToMap(devAttrMap, DevicePath);
+
+            // See if we can find a PHYSICALDRIVE path
+            HANDLE handle = CreateFile(DevicePath.c_str(),
+                GENERIC_WRITE | GENERIC_READ,
+                (FILE_SHARE_READ | FILE_SHARE_WRITE),
+                NULL,
+                OPEN_EXISTING,
+                NULL,
+                NULL);
+
+            if (handle != INVALID_HANDLE_VALUE)
+            {
+                STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
+                DWORD bytesReturned;
+                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL))
+                {
+                    std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
+                    addToMap(devAttrMap, PhysicalDrivePath);
+
+                    std::string PartitionNumber;
+                    if (storageDeviceNumber.PartitionNumber == (DWORD)-1)
+                    {
+                        PartitionNumber = "<Device Cannot Be Partitioned>";
+                    }
+                    else
+                    {
+                        PartitionNumber = std::to_string(storageDeviceNumber.PartitionNumber);
+                    }
+                    addToMap(devAttrMap, PartitionNumber);
+
+                    std::string DeviceType = std::to_string(storageDeviceNumber.DeviceType);
+                    addToMap(devAttrMap, DeviceType);
+                }
+
+                SCSI_ADDRESS scsiAddress = { 0 };
+                if (DeviceIoControl(handle, IOCTL_SCSI_GET_ADDRESS, NULL, 0, &scsiAddress, sizeof(SCSI_ADDRESS), &bytesReturned, NULL))
+                {
+                    if (scsiAddress.Length == sizeof(SCSI_ADDRESS))
+                    {
+                        std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiAddress.PortNumber) + ":";
+                        addToMap(devAttrMap, ScsiAdapterPath);
+
+                        std::string ScsiPathId = std::to_string(scsiAddress.PathId);
+                        addToMap(devAttrMap, ScsiPathId);
+
+                        std::string ScsiLun = std::to_string(scsiAddress.Lun);
+                        addToMap(devAttrMap, ScsiLun);
+
+                        std::string ScsiTargetId = std::to_string(scsiAddress.TargetId);
+                        addToMap(devAttrMap, ScsiTargetId);
+
+                        std::string ScsiPortNumber = std::to_string(scsiAddress.PortNumber);
+                        addToMap(devAttrMap, ScsiPortNumber);
+                    }
+                }
+
+                CloseHandle(handle);
+            }
             interfaces.push_back(devAttrMap);
         }
 
@@ -380,6 +450,9 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
 
     std::vector<AttributeMap> completeDevicesAttrMap;
 
+    std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
+
+
     if (deviceDevs == INVALID_HANDLE_VALUE)
     {
         goto exit;
@@ -389,7 +462,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
         completeDevicesAttrMap = getInterfaceAttributeMap(GUID_NULL);
         for (int devIndex = 0; SetupDiEnumDeviceInfo(deviceDevs, devIndex, &devInfo); devIndex++)
         {
-            AttributeMap devAttrMap = getDeviceAttributeMap(deviceDevs, devInfo);
+            AttributeMap devAttrMap = getDeviceAttributeMap(deviceDevs, devInfo, scsiPortToDeviceIdMap);
 
             bool addToAttrMap = true;
 
@@ -464,4 +537,45 @@ DEVINST getDevInstWith(std::string &key, std::string &value)
         return pDevInfoData->DevInst;
     }
     return NULL;
+}
+
+std::map<int, std::string> getScsiPortToDeviceIdMap()
+{
+    std::map<int, std::string> scsiPortToDeviceIdMap;
+    std::map<int, std::string> scsiPortToDriver;
+    std::map < std::string, std::vector < std::string>> driverToDeviceIdsMap;
+
+    int currentPort = 0;
+    std::string currentDriver;
+    while (getStringFromRegistry(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\Scsi\\Scsi Port " + std::to_string(currentPort), "Driver", currentDriver))
+    {
+        scsiPortToDriver[currentPort] = rTrim(currentDriver);
+        currentPort++;
+
+        if (driverToDeviceIdsMap.find(currentDriver) == driverToDeviceIdsMap.end())
+        {
+            std::vector<std::string> deviceIds;
+            std::string deviceId;
+            int currentDeviceIdIndex = 0;
+            std::string subKey = "SYSTEM\\CurrentControlSet\\Services\\" + std::string(currentDriver) + "\\Enum";
+            while (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, std::to_string(currentDeviceIdIndex), deviceId))
+            {
+                deviceIds.push_back(deviceId);
+                currentDeviceIdIndex++;
+            }
+            driverToDeviceIdsMap[currentDriver] = deviceIds;
+        }
+    }
+
+    for (auto &i : scsiPortToDriver)
+    {
+        int port = i.first;
+        std::string driver = i.second;
+        auto &deviceIds = driverToDeviceIdsMap[driver];
+        scsiPortToDeviceIdMap[port] = deviceIds[0];
+
+        deviceIds.erase(deviceIds.begin());
+    }
+
+    return scsiPortToDeviceIdMap;
 }

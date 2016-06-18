@@ -121,6 +121,7 @@
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="Enumerations.cpp" />
     <ClCompile Include="Features.cpp" />
+    <ClCompile Include="Registry.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Strings.cpp" />
   </ItemGroup>
@@ -128,6 +129,7 @@
     <ClInclude Include="Core.h" />
     <ClInclude Include="Enumerations.h" />
     <ClInclude Include="Features.h" />
+    <ClInclude Include="Registry.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Strings.h" />
   </ItemGroup>
