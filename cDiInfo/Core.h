@@ -35,6 +35,10 @@ typedef std::map<std::string, std::string> AttributeMap;
 #define UNAVAILABLE_ATTRIBUTE "<Attribute Unavailable>"
 // Used to designate an inability to find children
 #define NO_CHILDREN "<No Children Found>"
+// Used to designate an inability to find the parent
+#define NO_PARENT "<No Parent Found>"
+// Used to designate an inability to find siblings
+#define NO_SIBLINGS "<No Siblings Found>"
 // Take a map and add a given item. Use the name of the field as the key of the map.
 #define addToMap(map, itm) map[#itm] = itm
 

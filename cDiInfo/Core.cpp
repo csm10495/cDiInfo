@@ -226,21 +226,38 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     std::string DeviceId = getDeviceId(devInfo.DevInst);
     addToMap(devAttrMap, DeviceId);
 
-    std::string ChildrenDeviceIds = "";
+    std::string ChildrenDeviceIds = NO_CHILDREN;
     DEVINST childDevInst = { 0 };
     if (CM_Get_Child(&childDevInst, devInfo.DevInst, 0) == CR_SUCCESS)
     {
+        ChildrenDeviceIds = "";
         ChildrenDeviceIds += getDeviceId(childDevInst) + "\n";
         while (CM_Get_Sibling(&childDevInst, childDevInst, 0) != CR_NO_SUCH_DEVNODE)
         {
             ChildrenDeviceIds += getDeviceId(childDevInst) + "\n";
         }
     }
-    if (ChildrenDeviceIds == "")
-    {
-        ChildrenDeviceIds = NO_CHILDREN;
-    }
     addToMap(devAttrMap, ChildrenDeviceIds);
+
+    std::string ParentDeviceId = NO_PARENT;
+    DEVINST parentDevInst = { 0 };
+    if (CM_Get_Parent(&parentDevInst, devInfo.DevInst, 0) == CR_SUCCESS)
+    {
+        ParentDeviceId = getDeviceId(parentDevInst);
+    }
+    addToMap(devAttrMap, ParentDeviceId);
+
+    std::string SiblingDeviceIds = "";
+    DEVINST siblingDevInst = { 0 };
+    while (CM_Get_Sibling(&devInfo.DevInst, devInfo.DevInst, 0) == CR_SUCCESS)
+    {
+        SiblingDeviceIds += getDeviceId(devInfo.DevInst) + "\n";
+    }
+    if (SiblingDeviceIds.empty())
+    {
+        SiblingDeviceIds = NO_SIBLINGS;
+    }
+    addToMap(devAttrMap, SiblingDeviceIds);
 
     SP_DRVINFO_DATA driverInfoData = { 0 };
     driverInfoData.cbSize = sizeof(driverInfoData);
@@ -451,7 +468,6 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
     std::vector<AttributeMap> completeDevicesAttrMap;
 
     std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
-
 
     if (deviceDevs == INVALID_HANDLE_VALUE)
     {
