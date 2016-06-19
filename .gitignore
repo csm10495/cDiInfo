@@ -6,3 +6,7 @@
 /Debug
 /cDiInfo.VC.db
 /cDiInfo.VC.VC.opendb
+/cDiInfo/Release
+/cDiInfo/x64/Debug
+/x64/Debug
+/.vs
