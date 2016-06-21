@@ -571,7 +571,7 @@ AttributeMap getAttributeMapWith(std::string key, std::string value)
 DEVINST getDevInstWith(std::string &key, std::string &value)
 {
     AttributeMap deviceAttrMap = getAttributeMapWith(key, value);
-    if (deviceAttrMap.size() == 1)
+    if (!deviceAttrMap.empty())
     {
         PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrMap["__devInfoDataString"].c_str();
         return pDevInfoData->DevInst;
