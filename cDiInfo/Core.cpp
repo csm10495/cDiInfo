@@ -247,11 +247,35 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     }
     addToMap(devAttrMap, ParentDeviceId);
 
-    std::string SiblingDeviceIds = "";
-    DEVINST siblingDevInst = { 0 };
-    while (CM_Get_Sibling(&devInfo.DevInst, devInfo.DevInst, 0) == CR_SUCCESS)
+    ULONG pulStatus = 0;
+    ULONG pulProblemNumber = 0;
+    std::string NodeStatus = UNAVAILABLE_ATTRIBUTE;
+    std::string NodeProblemNumber = UNAVAILABLE_ATTRIBUTE;
+    auto ret = CM_Get_DevNode_Status(&pulStatus, &pulProblemNumber, devInfo.DevInst, 0);
+    if (ret == CR_SUCCESS)
     {
-        SiblingDeviceIds += getDeviceId(devInfo.DevInst) + "\n";
+        NodeStatus = std::to_string(pulStatus);
+        NodeProblemNumber = std::to_string(pulProblemNumber);
+    }
+    addToMap(devAttrMap, NodeStatus);
+    addToMap(devAttrMap, NodeProblemNumber);
+
+
+    ULONG pulDepth = 0;
+    std::string NodeDepth = UNAVAILABLE_ATTRIBUTE;
+    if (CM_Get_Depth(&pulDepth, devInfo.DevInst, 0) == CR_SUCCESS)
+    {
+        NodeDepth = std::to_string(pulDepth);
+    }
+    addToMap(devAttrMap, NodeDepth);
+
+    std::string SiblingDeviceIds = "";
+    // Make a copy to not mess up the standard DevInst
+    SP_DEVINFO_DATA sib;
+    memcpy(&sib, &devInfo, sizeof(SP_DEVINFO_DATA));
+    while (CM_Get_Sibling(&sib.DevInst, sib.DevInst, 0) == CR_SUCCESS)
+    {
+        SiblingDeviceIds += getDeviceId(sib.DevInst) + "\n";
     }
     if (SiblingDeviceIds.empty())
     {
