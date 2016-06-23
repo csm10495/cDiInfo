@@ -41,6 +41,8 @@ typedef std::map<std::string, std::string> AttributeMap;
 #define NO_SIBLINGS "<No Siblings Found>"
 // Used if no problem is detected
 #define NO_PROBLEM "<No Problem Detected>"
+// Used as a (sketchy) way of passing a DEVINST in a string vector
+#define DEVINFO_DATA_STRING "__devInfoDataString"
 // Take a map and add a given item. Use the name of the field as the key of the map.
 #define addToMap(map, itm) map[#itm] = itm
 
@@ -61,12 +63,6 @@ bool getDriverInfoData(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, PSP_DRVINFO_DAT
 // Gets the Device Id for the given DEVINST
 std::string getDeviceId(DEVINST &devInst);
 
-// Turns the CM_Prob number into a string of the status
-std::string cmProbToString(ULONG problemNumber);
-
-// Gets a string of the node status from the numeric mask
-std::string nodeStatusToString(ULONG status);
-
 // Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
 //   this is a collection of 'attributes'
 AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
@@ -84,7 +80,7 @@ void printAttributeMap(AttributeMap &attrMap);
 AttributeMap getAttributeMapWith(std::string key, std::string value);
 
 // Gets a DEVINST that has a matching key and value in it's AttributeMap
-DEVINST getDevInstWith(std::string &key, std::string &value);
+DEVINST getDevInstWith(std::string key, std::string value);
 
 // Gets a mapping from SCSI port to device id
 std::map<int, std::string> getScsiPortToDeviceIdMap();

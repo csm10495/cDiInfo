@@ -79,13 +79,8 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
         }
         else if (retType == _GUID_)
         {
-            wchar_t guidCharArr[4096] = { 0 };
-
             GUID g = *((GUID*)retStr.c_str());
-            int size = StringFromGUID2(g, guidCharArr, 4096);
-
-            std::wstring asWStr = std::wstring(guidCharArr);
-            return std::string(asWStr.begin(), asWStr.end());
+            return guidToString(g);
         }
         else if (retType == __WSTRING_)
         {
@@ -134,387 +129,16 @@ bool getDriverInfoData(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, PSP_DRVINFO_DAT
 std::string getDeviceId(DEVINST &devInst)
 {
     ULONG deviceIdSize;
-    CM_Get_Device_ID_Size(&deviceIdSize, devInst, 0);
-    std::string deviceId(" ", deviceIdSize + 1);
-    if (CM_Get_Device_ID(devInst, (char*)(deviceId.c_str()), deviceIdSize + 1, 0) == CR_SUCCESS)
+    if (CM_Get_Device_ID_Size(&deviceIdSize, devInst, 0) == CR_SUCCESS)
     {
-        deviceId[deviceIdSize] = ' ';
-        return rTrim(deviceId);
+        std::string deviceId(" ", deviceIdSize + 1);
+        if (CM_Get_Device_ID(devInst, (char*)(deviceId.c_str()), deviceIdSize + 1, 0) == CR_SUCCESS)
+        {
+            deviceId[deviceIdSize] = ' ';
+            return rTrim(deviceId);
+        }
     }
     return UNAVAILABLE_ATTRIBUTE;
-}
-
-std::string cmProbToString(ULONG problemNumber)
-{
-    if (problemNumber == 1)
-    {
-        return "CM_PROB_NOT_CONFIGURED";
-    }
-    if (problemNumber == 2)
-    {
-        return "CM_PROB_DEVLOADER_FAILED";
-    }
-    if (problemNumber == 3)
-    {
-        return "CM_PROB_OUT_OF_MEMORY";
-    }
-    if (problemNumber == 4)
-    {
-        return "CM_PROB_ENTRY_IS_WRONG_TYPE";
-    }
-    if (problemNumber == 5)
-    {
-        return "CM_PROB_LACKED_ARBITRATOR";
-    }
-    if (problemNumber == 6)
-    {
-        return "CM_PROB_BOOT_CONFIG_CONFLICT";
-    }
-    if (problemNumber == 7)
-    {
-        return "CM_PROB_FAILED_FILTER";
-    }
-    if (problemNumber == 8)
-    {
-        return "CM_PROB_DEVLOADER_NOT_FOUND";
-    }
-    if (problemNumber == 9)
-    {
-        return "CM_PROB_INVALID_DATA";
-    }
-    if (problemNumber == 10)
-    {
-        return "CM_PROB_FAILED_START";
-    }
-    if (problemNumber == 11)
-    {
-        return "CM_PROB_LIAR";
-    }
-    if (problemNumber == 12)
-    {
-        return "CM_PROB_NORMAL_CONFLICT";
-    }
-    if (problemNumber == 13)
-    {
-        return "CM_PROB_NOT_VERIFIED";
-    }
-    if (problemNumber == 14)
-    {
-        return "CM_PROB_NEED_RESTART";
-    }
-    if (problemNumber == 15)
-    {
-        return "CM_PROB_REENUMERATION";
-    }
-    if (problemNumber == 16)
-    {
-        return "CM_PROB_PARTIAL_LOG_CONF";
-    }
-    if (problemNumber == 17)
-    {
-        return "CM_PROB_UNKNOWN_RESOURCE";
-    }
-    if (problemNumber == 18)
-    {
-        return "CM_PROB_REINSTALL";
-    }
-    if (problemNumber == 19)
-    {
-        return "CM_PROB_REGISTRY";
-    }
-    if (problemNumber == 20)
-    {
-        return "CM_PROB_VXDLDR";
-    }
-    if (problemNumber == 21)
-    {
-        return "CM_PROB_WILL_BE_REMOVED";
-    }
-    if (problemNumber == 22)
-    {
-        return "CM_PROB_DISABLED";
-    }
-    if (problemNumber == 23)
-    {
-        return "CM_PROB_DEVLOADER_NOT_READY";
-    }
-    if (problemNumber == 24)
-    {
-        return "CM_PROB_DEVICE_NOT_THERE";
-    }
-    if (problemNumber == 25)
-    {
-        return "CM_PROB_MOVED";
-    }
-    if (problemNumber == 26)
-    {
-        return "CM_PROB_TOO_EARLY";
-    }
-    if (problemNumber == 27)
-    {
-        return "CM_PROB_NO_VALID_LOG_CONF";
-    }
-    if (problemNumber == 28)
-    {
-        return "CM_PROB_FAILED_INSTALL";
-    }
-    if (problemNumber == 29)
-    {
-        return "CM_PROB_HARDWARE_DISABLED";
-    }
-    if (problemNumber == 30)
-    {
-        return "CM_PROB_CANT_SHARE_IRQ";
-    }
-    if (problemNumber == 31)
-    {
-        return "CM_PROB_FAILED_ADD";
-    }
-    if (problemNumber == 32)
-    {
-        return "CM_PROB_DISABLED_SERVICE";
-    }
-    if (problemNumber == 33)
-    {
-        return "CM_PROB_TRANSLATION_FAILED";
-    }
-    if (problemNumber == 34)
-    {
-        return "CM_PROB_NO_SOFTCONFIG";
-    }
-    if (problemNumber == 35)
-    {
-        return "CM_PROB_BIOS_TABLE";
-    }
-    if (problemNumber == 36)
-    {
-        return "CM_PROB_IRQ_TRANSLATION_FAILED";
-    }
-    if (problemNumber == 37)
-    {
-        return "CM_PROB_FAILED_DRIVER_ENTRY";
-    }
-    if (problemNumber == 38)
-    {
-        return "CM_PROB_DRIVER_FAILED_PRIOR_UNLOAD";
-    }
-    if (problemNumber == 39)
-    {
-        return "CM_PROB_DRIVER_FAILED_LOAD";
-    }
-    if (problemNumber == 40)
-    {
-        return "CM_PROB_DRIVER_SERVICE_KEY_INVALID";
-    }
-    if (problemNumber == 41)
-    {
-        return "CM_PROB_LEGACY_SERVICE_NO_DEVICES";
-    }
-    if (problemNumber == 42)
-    {
-        return "CM_PROB_DUPLICATE_DEVICE";
-    }
-    if (problemNumber == 43)
-    {
-        return "CM_PROB_FAILED_POST_START";
-    }
-    if (problemNumber == 44)
-    {
-        return "CM_PROB_HALTED";
-    }
-    if (problemNumber == 45)
-    {
-        return "CM_PROB_PHANTOM";
-    }
-    if (problemNumber == 46)
-    {
-        return "CM_PROB_SYSTEM_SHUTDOWN";
-    }
-    if (problemNumber == 47)
-    {
-        return "CM_PROB_HELD_FOR_EJECT";
-    }
-    if (problemNumber == 48)
-    {
-        return "CM_PROB_DRIVER_BLOCKED";
-    }
-    if (problemNumber == 49)
-    {
-        return "CM_PROB_REGISTRY_TOO_LARGE";
-    }
-    if (problemNumber == 50)
-    {
-        return "CM_PROB_SETPROPERTIES_FAILED";
-    }
-    if (problemNumber == 51)
-    {
-        return "CM_PROB_WAITING_ON_DEPENDENCY";
-    }
-    if (problemNumber == 52)
-    {
-        return "CM_PROB_UNSIGNED_DRIVER";
-    }
-    if (problemNumber == 53)
-    {
-        return "CM_PROB_USED_BY_DEBUGGER";
-    }
-
-    return "Unknown CM_Prob Code";
-}
-
-std::string nodeStatusToString(ULONG status)
-{
-    std::string retString = "";
-
-    if (status & 1)
-    {
-        retString +=  "DN_ROOT_ENUMERATED, ";
-    }
-    if (status & 2)
-    {
-        retString +=  "DN_DRIVER_LOADED, ";
-    }
-    if (status & 4)
-    {
-        retString +=  "DN_ENUM_LOADED, ";
-    }
-    if (status & 8)
-    {
-        retString +=  "DN_STARTED, ";
-    }
-    if (status & 16)
-    {
-        retString +=  "DN_MANUAL, ";
-    }
-    if (status & 32)
-    {
-        retString +=  "DN_NEED_TO_ENUM, ";
-    }
-    if (status & 64)
-    {
-        retString +=  "DN_DRIVER_BLOCKED, ";
-    }
-    if (status & 64)
-    {
-        retString +=  "DN_NOT_FIRST_TIME, ";
-    }
-    if (status & 128)
-    {
-        retString +=  "DN_HARDWARE_ENUM, ";
-    }
-    if (status & 256)
-    {
-        retString +=  "DN_LIAR, ";
-    }
-    if (status & 256)
-    {
-        retString +=  "DN_NEED_RESTART, ";
-    }
-    if (status & 512)
-    {
-        retString +=  "DN_HAS_MARK, ";
-    }
-    if (status & 512)
-    {
-        retString +=  "DN_CHILD_WITH_INVALID_ID, ";
-    }
-    if (status & 1024)
-    {
-        retString +=  "DN_HAS_PROBLEM, ";
-    }
-    if (status & 2048)
-    {
-        retString +=  "DN_FILTERED, ";
-    }
-    if (status & 4096)
-    {
-        retString +=  "DN_MOVED, ";
-    }
-    if (status & 4096)
-    {
-        retString +=  "DN_LEGACY_DRIVER, ";
-    }
-    if (status & 8192)
-    {
-        retString +=  "DN_DISABLEABLE, ";
-    }
-    if (status & 16384)
-    {
-        retString +=  "DN_REMOVABLE, ";
-    }
-    if (status & 32768)
-    {
-        retString +=  "DN_PRIVATE_PROBLEM, ";
-    }
-    if (status & 65536)
-    {
-        retString +=  "DN_MF_PARENT, ";
-    }
-    if (status & 131072)
-    {
-        retString +=  "DN_MF_CHILD, ";
-    }
-    if (status & 262144)
-    {
-        retString +=  "DN_WILL_BE_REMOVED, ";
-    }
-    if (status & 524288)
-    {
-        retString +=  "DN_NOT_FIRST_TIMEE, ";
-    }
-    if (status & 1048576)
-    {
-        retString +=  "DN_STOP_FREE_RES, ";
-    }
-    if (status & 2097152)
-    {
-        retString +=  "DN_REBAL_CANDIDATE, ";
-    }
-    if (status & 4194304)
-    {
-        retString +=  "DN_BAD_PARTIAL, ";
-    }
-    if (status & 8388608)
-    {
-        retString +=  "DN_NT_ENUMERATOR, ";
-    }
-    if (status & 16777216)
-    {
-        retString +=  "DN_NT_DRIVER, ";
-    }
-    if (status & 33554432)
-    {
-        retString +=  "DN_NEEDS_LOCKING, ";
-    }
-    if (status & 33554432)
-    {
-        retString +=  "DN_DEVICE_DISCONNECTED, ";
-    }
-    if (status & 67108864)
-    {
-        retString +=  "DN_ARM_WAKEUP, ";
-    }
-    if (status & 134217728)
-    {
-        retString +=  "DN_APM_ENUMERATOR, ";
-    }
-    if (status & 268435456)
-    {
-        retString +=  "DN_APM_DRIVER, ";
-    }
-    if (status & 536870912)
-    {
-        retString +=  "DN_SILENT_INSTALL, ";
-    }
-    if (status & 1073741824)
-    {
-        retString +=  "DN_NO_SHOW_IN_DM, ";
-    }
-    if (status & 2147483648)
-    {
-        retString +=  "DN_BOOT_LOG_PROB, ";
-    }
-    return retString.erase(retString.size() - 2, 2);
 }
 
 AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap)
@@ -698,6 +322,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
         {
             std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiPortToDeviceId.first) + ":";
             addToMap(devAttrMap, ScsiAdapterPath);
+            break;
         }
     }
 
@@ -947,12 +572,12 @@ AttributeMap getAttributeMapWith(std::string key, std::string value)
     return AttributeMap();
 }
 
-DEVINST getDevInstWith(std::string &key, std::string &value)
+DEVINST getDevInstWith(std::string key, std::string value)
 {
     AttributeMap deviceAttrMap = getAttributeMapWith(key, value);
     if (!deviceAttrMap.empty())
     {
-        PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrMap["__devInfoDataString"].c_str();
+        PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrMap[DEVINFO_DATA_STRING].c_str();
         return pDevInfoData->DevInst;
     }
     return NULL;

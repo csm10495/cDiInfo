@@ -5,13 +5,13 @@
 */
 #pragma once
 
+// WinApi includes
+#include <Windows.h>
+
 // STL includes
 #include <algorithm>
 #include <string>
 #include <iostream>
-
-// WinApi includes
-#include <Windows.h>
 
 // Right trims the given string (by reference) and returns it
 std::string &rTrim(std::string &s);
