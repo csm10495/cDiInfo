@@ -39,6 +39,8 @@ typedef std::map<std::string, std::string> AttributeMap;
 #define NO_PARENT "<No Parent Found>"
 // Used to designate an inability to find siblings
 #define NO_SIBLINGS "<No Siblings Found>"
+// Used if no problem is detected
+#define NO_PROBLEM "<No Problem Detected>"
 // Take a map and add a given item. Use the name of the field as the key of the map.
 #define addToMap(map, itm) map[#itm] = itm
 
@@ -58,6 +60,12 @@ bool getDriverInfoData(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, PSP_DRVINFO_DAT
 
 // Gets the Device Id for the given DEVINST
 std::string getDeviceId(DEVINST &devInst);
+
+// Turns the CM_Prob number into a string of the status
+std::string cmProbToString(ULONG problemNumber);
+
+// Gets a string of the node status from the numeric mask
+std::string nodeStatusToString(ULONG status);
 
 // Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
 //   this is a collection of 'attributes'
