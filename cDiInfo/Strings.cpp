@@ -10,6 +10,12 @@
 std::string &rTrim(std::string & s)
 {
     s.erase(s.find_last_not_of(" \n\r\t") + 1);
+
+    while (s.size() > 0 && s.back() == '\0')
+    {
+        s.pop_back();
+    }
+
     return s;
 }
 
@@ -675,4 +681,994 @@ std::string cmRetValueToString(unsigned long value)
     }
 
     return "Unkown CR Return Code";
+}
+
+std::string windowsErrorToString(uint32_t errorCode)
+{
+    char* lpMsgBuf;
+    DWORD bufLen = FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        errorCode,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&lpMsgBuf,
+        0, NULL);
+
+    if (bufLen)
+    {
+        std::string result((char*)lpMsgBuf, bufLen);
+        LocalFree(lpMsgBuf);
+        return result;
+    }
+    else
+    {
+        return "";
+    }
+}
+
+std::string wStringToString(std::wstring wStr)
+{
+    return std::string(wStr.begin(), wStr.end());
+}
+
+std::string propertyKeyToString(DEVPROPKEY propertyKey)
+{
+
+    if (IsEqualDevPropKey(DEVPKEY_Device_DeviceDesc, propertyKey))
+    {
+        return "Device_DeviceDesc";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_HardwareIds, propertyKey))
+    {
+        return "Device_HardwareId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_CompatibleIds, propertyKey))
+    {
+        return "Device_CompatibleIds";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Service, propertyKey))
+    {
+        return "Device_Service";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Class, propertyKey))
+    {
+        return "Device_Class";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ClassGuid, propertyKey))
+    {
+        return "Device_ClassGuid";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Driver, propertyKey))
+    {
+        return "Device_Driver";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ConfigFlags, propertyKey))
+    {
+        return "Device_ConfigFlags";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Manufacturer, propertyKey))
+    {
+        return "Device_Manufacturer";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_FriendlyName, propertyKey))
+    {
+        return "Device_FriendlyName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_LocationInfo, propertyKey))
+    {
+        return "Device_LocationInfo";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_PDOName, propertyKey))
+    {
+        return "Device_PDOName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Capabilities, propertyKey))
+    {
+        return "Device_Capabilities";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_UINumber, propertyKey))
+    {
+        return "Device_UINumber";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_UpperFilters, propertyKey))
+    {
+        return "Device_UpperFilters";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_LowerFilters, propertyKey))
+    {
+        return "Device_LowerFilters";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_BusTypeGuid, propertyKey))
+    {
+        return "Device_BusTypeGuid";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_LegacyBusType, propertyKey))
+    {
+        return "Device_LegacyBusType";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_BusNumber, propertyKey))
+    {
+        return "Device_BusNumber";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_EnumeratorName, propertyKey))
+    {
+        return "Device_EnumeratorName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Security, propertyKey))
+    {
+        return "Device_Security";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_SecuritySDS, propertyKey))
+    {
+        return "Device_SecuritySDS";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DevType, propertyKey))
+    {
+        return "Device_DevType";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Exclusive, propertyKey))
+    {
+        return "Device_Exclusive";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Characteristics, propertyKey))
+    {
+        return "Device_Characteristics";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Address, propertyKey))
+    {
+        return "Device_Address";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_UINumberDescFormat, propertyKey))
+    {
+        return "Device_UINumberDescFormat";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_PowerData, propertyKey))
+    {
+        return "Device_PowerData";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_RemovalPolicy, propertyKey))
+    {
+        return "Device_RemovalPolicy";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_RemovalPolicyDefault, propertyKey))
+    {
+        return "Device_RemovalPolicyHwDefault";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_RemovalPolicyOverride, propertyKey))
+    {
+        return "Device_RemovalPolicyOverride";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_InstallState, propertyKey))
+    {
+        return "Device_InstallState";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_LocationPaths, propertyKey))
+    {
+        return "Device_LocationPaths";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_BaseContainerId, propertyKey))
+    {
+        return "Device_BaseContainerId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_InstanceId, propertyKey))
+    {
+        return "Device_InstanceId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DevNodeStatus, propertyKey))
+    {
+        return "Device_DevNodeStatus";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ProblemCode, propertyKey))
+    {
+        return "Device_ProblemCode";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_EjectionRelations, propertyKey))
+    {
+        return "Device_EjectionRelations";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_RemovalRelations, propertyKey))
+    {
+        return "Device_RemovalRelations";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_PowerRelations, propertyKey))
+    {
+        return "Device_PowerRelations";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_BusRelations, propertyKey))
+    {
+        return "Device_BusRelations";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Parent, propertyKey))
+    {
+        return "Device_ParentDeviceId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Children, propertyKey))
+    {
+        return "Device_Children";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Siblings, propertyKey))
+    {
+        return "Device_Siblings";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_TransportRelations, propertyKey))
+    {
+        return "Device_TransportRelations";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ProblemStatus, propertyKey))
+    {
+        return "Device_ProblemStatus";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Reported, propertyKey))
+    {
+        return "Device_Reported";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Legacy, propertyKey))
+    {
+        return "Device_Legacy";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ContainerId, propertyKey))
+    {
+        return "Device_ContainerId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_InLocalMachineContainer, propertyKey))
+    {
+        return "Device_InLocalMachineContainer";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Model, propertyKey))
+    {
+        return "Device_Model";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ModelId, propertyKey))
+    {
+        return "Device_ModelId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_FriendlyNameAttributes, propertyKey))
+    {
+        return "Device_FriendlyNameAttributes";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ManufacturerAttributes, propertyKey))
+    {
+        return "Device_ManufacturerAttributes";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_PresenceNotForDevice, propertyKey))
+    {
+        return "Device_PresenceNotForDevice";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_SignalStrength, propertyKey))
+    {
+        return "Device_SignalStrength";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_IsAssociateableByUserAction, propertyKey))
+    {
+        return "Device_IsAssociateableByUserAction";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ShowInUninstallUI, propertyKey))
+    {
+        return "Device_ShowInUninstallUI";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Numa_Proximity_Domain, propertyKey))
+    {
+        return "Device_Numa_Proximity_Domain";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DHP_Rebalance_Policy, propertyKey))
+    {
+        return "Device_DHP_Rebalance_Policy";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Numa_Node, propertyKey))
+    {
+        return "Device_Numa_Node";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_BusReportedDeviceDesc, propertyKey))
+    {
+        return "Device_BusReportedDeviceDesc";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_IsPresent, propertyKey))
+    {
+        return "Device_IsPresent";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_HasProblem, propertyKey))
+    {
+        return "Device_HasProblem";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ConfigurationId, propertyKey))
+    {
+        return "Device_ConfigurationId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ReportedDeviceIdsHash, propertyKey))
+    {
+        return "Device_ReportedDeviceIdsHash";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_PhysicalDeviceLocation, propertyKey))
+    {
+        return "Device_PhysicalDeviceLocation";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_BiosDeviceName, propertyKey))
+    {
+        return "Device_BiosDeviceName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverProblemDesc, propertyKey))
+    {
+        return "Device_DriverProblemDesc";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DebuggerSafe, propertyKey))
+    {
+        return "Device_DebuggerSafe";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_PostInstallInProgress, propertyKey))
+    {
+        return "Device_PostInstallInProgress";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_Stack, propertyKey))
+    {
+        return "Device_Stack";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ExtendedConfigurationIds, propertyKey))
+    {
+        return "Device_ExtendedConfigurationIds";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_IsRebootRequired, propertyKey))
+    {
+        return "Device_IsRebootRequired";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_FirmwareDate, propertyKey))
+    {
+        return "Device_FirmwareDate";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_FirmwareVersion, propertyKey))
+    {
+        return "Device_FirmwareVersion";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_FirmwareRevision, propertyKey))
+    {
+        return "Device_FirmwareRevision";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DependencyProviders, propertyKey))
+    {
+        return "Device_DependencyProviders";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DependencyDependents, propertyKey))
+    {
+        return "Device_DependencyDependents";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_SoftRestartSupported, propertyKey))
+    {
+        return "Device_SoftRestartSupported";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_SessionId, propertyKey))
+    {
+        return "Device_SessionId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_InstallDate, propertyKey))
+    {
+        return "Device_InstallDate";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_FirstInstallDate, propertyKey))
+    {
+        return "Device_FirstInstallDate";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_LastArrivalDate, propertyKey))
+    {
+        return "Device_LastArrivalDate";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_LastRemovalDate, propertyKey))
+    {
+        return "Device_LastRemovalDate";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverDate, propertyKey))
+    {
+        return "Device_DriverDate";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverVersion, propertyKey))
+    {
+        return "Device_DriverVersion";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverDesc, propertyKey))
+    {
+        return "Device_DriverDescription";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverInfPath, propertyKey))
+    {
+        return "Device_DriverInfPath";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverInfSection, propertyKey))
+    {
+        return "Device_DriverInfSection";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverInfSectionExt, propertyKey))
+    {
+        return "Device_DriverInfSectionExt";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_MatchingDeviceId, propertyKey))
+    {
+        return "Device_MatchingDeviceId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverProvider, propertyKey))
+    {
+        return "Device_DriverProvider";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverPropPageProvider, propertyKey))
+    {
+        return "Device_DriverPropPageProvider";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverCoInstallers, propertyKey))
+    {
+        return "Device_DriverCoInstallers";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ResourcePickerTags, propertyKey))
+    {
+        return "Device_ResourcePickerTags";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_ResourcePickerExceptions, propertyKey))
+    {
+        return "Device_ResourcePickerExceptions";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverRank, propertyKey))
+    {
+        return "Device_DriverRank";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_DriverLogoLevel, propertyKey))
+    {
+        return "Device_DriverLogoLevel";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_NoConnectSound, propertyKey))
+    {
+        return "Device_NoConnectSound";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_GenericDriverInstalled, propertyKey))
+    {
+        return "Device_GenericDriverInstalled";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_AdditionalSoftwareRequested, propertyKey))
+    {
+        return "Device_AdditionalSoftwareRequested";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_SafeRemovalRequired, propertyKey))
+    {
+        return "Device_SafeRemovalRequired";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_Device_SafeRemovalRequiredOverride, propertyKey))
+    {
+        return "Device_SafeRemovalRequiredOverride";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DrvPkg_Model, propertyKey))
+    {
+        return "DrvPkg_Model";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DrvPkg_VendorWebSite, propertyKey))
+    {
+        return "DrvPkg_VendorWebSite";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DrvPkg_DetailedDescription, propertyKey))
+    {
+        return "DrvPkg_DetailedDescription";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DrvPkg_DocumentationLink, propertyKey))
+    {
+        return "DrvPkg_DocumentationLink";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DrvPkg_Icon, propertyKey))
+    {
+        return "DrvPkg_Icon";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DrvPkg_BrandingIcon, propertyKey))
+    {
+        return "DrvPkg_BrandingIcon";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_UpperFilters, propertyKey))
+    {
+        return "DeviceClass_UpperFilters";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_LowerFilters, propertyKey))
+    {
+        return "DeviceClass_LowerFilters";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_Security, propertyKey))
+    {
+        return "DeviceClass_Security";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_SecuritySDS, propertyKey))
+    {
+        return "DeviceClass_SecuritySDS";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_DevType, propertyKey))
+    {
+        return "DeviceClass_DevType";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_Exclusive, propertyKey))
+    {
+        return "DeviceClass_Exclusive";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_Characteristics, propertyKey))
+    {
+        return "DeviceClass_Characteristics";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_Name, propertyKey))
+    {
+        return "DeviceClass_Name";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_ClassName, propertyKey))
+    {
+        return "DeviceClass_ClassName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_Icon, propertyKey))
+    {
+        return "DeviceClass_Icon";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_ClassInstaller, propertyKey))
+    {
+        return "DeviceClass_ClassInstaller";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_PropPageProvider, propertyKey))
+    {
+        return "DeviceClass_PropPageProvider";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_NoInstallClass, propertyKey))
+    {
+        return "DeviceClass_NoInstallClass";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_NoDisplayClass, propertyKey))
+    {
+        return "DeviceClass_NoDisplayClass";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_SilentInstall, propertyKey))
+    {
+        return "DeviceClass_SilentInstall";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_NoUseClass, propertyKey))
+    {
+        return "DeviceClass_NoUseClass";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_DefaultService, propertyKey))
+    {
+        return "DeviceClass_DefaultService";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_IconPath, propertyKey))
+    {
+        return "DeviceClass_IconPath";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_DHPRebalanceOptOut, propertyKey))
+    {
+        return "DeviceClass_DHPRebalanceOptOut";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceClass_ClassCoInstallers, propertyKey))
+    {
+        return "DeviceClass_ClassCoInstallers";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterface_FriendlyName, propertyKey))
+    {
+        return "DeviceInterface_FriendlyName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterface_Enabled, propertyKey))
+    {
+        return "DeviceInterface_Enabled";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterface_ClassGuid, propertyKey))
+    {
+        return "DeviceInterface_ClassGuid";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterface_ReferenceString, propertyKey))
+    {
+        return "DeviceInterface_ReferenceString";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterface_Restricted, propertyKey))
+    {
+        return "DeviceInterface_Restricted";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterfaceClass_DefaultInterface, propertyKey))
+    {
+        return "DeviceInterfaceClass_DefaultInterface";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceInterfaceClass_Name, propertyKey))
+    {
+        return "DeviceInterfaceClass_Name";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Address, propertyKey))
+    {
+        return "DeviceContainer_Address";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_DiscoveryMethod, propertyKey))
+    {
+        return "DeviceContainer_DiscoveryMethod";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsEncrypted, propertyKey))
+    {
+        return "DeviceContainer_IsEncrypted";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsAuthenticated, propertyKey))
+    {
+        return "DeviceContainer_IsAuthenticated";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsConnected, propertyKey))
+    {
+        return "DeviceContainer_IsConnected";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsPaired, propertyKey))
+    {
+        return "DeviceContainer_IsPaired";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Icon, propertyKey))
+    {
+        return "DeviceContainer_Icon";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Version, propertyKey))
+    {
+        return "DeviceContainer_Version";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Last_Seen, propertyKey))
+    {
+        return "DeviceContainer_Last_Seen";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Last_Connected, propertyKey))
+    {
+        return "DeviceContainer_Last_Connected";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsShowInDisconnectedState, propertyKey))
+    {
+        return "DeviceContainer_IsShowInDisconnectedState";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsLocalMachine, propertyKey))
+    {
+        return "DeviceContainer_IsLocalMachine";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_MetadataPath, propertyKey))
+    {
+        return "DeviceContainer_MetadataPath";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsMetadataSearchInProgress, propertyKey))
+    {
+        return "DeviceContainer_IsMetadataSearchInProgress";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_MetadataChecksum, propertyKey))
+    {
+        return "DeviceContainer_MetadataChecksum";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsNotInterestingForDisplay, propertyKey))
+    {
+        return "DeviceContainer_IsNotInterestingForDisplay";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_LaunchDeviceStageOnDeviceConnect, propertyKey))
+    {
+        return "DeviceContainer_LaunchDeviceStageOnDeviceConnect";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_LaunchDeviceStageFromExplorer, propertyKey))
+    {
+        return "DeviceContainer_LaunchDeviceStageFromExplorer";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_BaselineExperienceId, propertyKey))
+    {
+        return "DeviceContainer_BaselineExperienceId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsDeviceUniquelyIdentifiable, propertyKey))
+    {
+        return "DeviceContainer_IsDeviceUniquelyIdentifiable";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_AssociationArray, propertyKey))
+    {
+        return "DeviceContainer_AssociationArray";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_DeviceDescription1, propertyKey))
+    {
+        return "DeviceContainer_DeviceDescription1";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_DeviceDescription2, propertyKey))
+    {
+        return "DeviceContainer_DeviceDescription2";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_HasProblem, propertyKey))
+    {
+        return "DeviceContainer_HasProblem";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsSharedDevice, propertyKey))
+    {
+        return "DeviceContainer_IsSharedDevice";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsNetworkDevice, propertyKey))
+    {
+        return "DeviceContainer_IsNetworkDevice";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsDefaultDevice, propertyKey))
+    {
+        return "DeviceContainer_IsDefaultDevice";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_MetadataCabinet, propertyKey))
+    {
+        return "DeviceContainer_MetadataCabinet";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_RequiresPairingElevation, propertyKey))
+    {
+        return "DeviceContainer_RequiresPairingElevation";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_ExperienceId, propertyKey))
+    {
+        return "DeviceContainer_ExperienceId";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Category, propertyKey))
+    {
+        return "DeviceContainer_Category";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Category_Desc_Singular, propertyKey))
+    {
+        return "DeviceContainer_Category_Desc_Singular";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Category_Desc_Plural, propertyKey))
+    {
+        return "DeviceContainer_Category_Desc_Plural";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Category_Icon, propertyKey))
+    {
+        return "DeviceContainer_Category_Icon";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_CategoryGroup_Desc, propertyKey))
+    {
+        return "DeviceContainer_CategoryGroup_Desc";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_CategoryGroup_Icon, propertyKey))
+    {
+        return "DeviceContainer_CategoryGroup_Icon";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_PrimaryCategory, propertyKey))
+    {
+        return "DeviceContainer_PrimaryCategory";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_UnpairUninstall, propertyKey))
+    {
+        return "DeviceContainer_UnpairUninstall";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_RequiresUninstallElevation, propertyKey))
+    {
+        return "DeviceContainer_RequiresUninstallElevation";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_DeviceFunctionSubRank, propertyKey))
+    {
+        return "DeviceContainer_DeviceFunctionSubRank";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_AlwaysShowDeviceAsConnected, propertyKey))
+    {
+        return "DeviceContainer_AlwaysShowDeviceAsConnected";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_ConfigFlags, propertyKey))
+    {
+        return "DeviceContainer_ConfigFlags";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_PrivilegedPackageFamilyNames, propertyKey))
+    {
+        return "DeviceContainer_PrivilegedPackageFamilyNames";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_CustomPrivilegedPackageFamilyNames, propertyKey))
+    {
+        return "DeviceContainer_CustomPrivilegedPackageFamilyNames";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_IsRebootRequired, propertyKey))
+    {
+        return "DeviceContainer_IsRebootRequired";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_FriendlyName, propertyKey))
+    {
+        return "DeviceContainer_FriendlyName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_Manufacturer, propertyKey))
+    {
+        return "DeviceContainer_Manufacturer";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_ModelName, propertyKey))
+    {
+        return "DeviceContainer_ModelName";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_ModelNumber, propertyKey))
+    {
+        return "DeviceContainer_ModelNumber";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DeviceContainer_InstallInProgress, propertyKey))
+    {
+        return "DeviceContainer_InstallInProgress";
+    }
+    if (IsEqualDevPropKey(DEVPKEY_DevQuery_ObjectType, propertyKey))
+    {
+        return "DevQuery_ObjectType";
+    }
+
+    return (guidToString(propertyKey.fmtid) + "[" + std::to_string(propertyKey.pid) + "]");
+}
+
+std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSize, DEVPROPTYPE propertyType)
+{
+    if (propertyType == DEVPROP_TYPE_EMPTY || propertyType == DEVPROP_TYPE_NULL)
+    {
+        return "";
+    }
+    else if (propertyType == DEVPROP_TYPE_SBYTE)
+    {
+        return std::to_string((INT8)propertyBuffer[0]);
+    }
+    else if (propertyType == DEVPROP_TYPE_BYTE)
+    {
+        return std::to_string((UINT8)propertyBuffer[0]);
+    }
+    else if (propertyType == DEVPROP_TYPE_INT16)
+    {
+        INT16 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(INT16));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_UINT16)
+    {
+        UINT16 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(UINT16));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_INT32)
+    {
+        INT32 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(INT32));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_UINT32)
+    {
+        UINT32 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(UINT32));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_INT64)
+    {
+        INT64 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(INT64));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_UINT64)
+    {
+        UINT64 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(UINT64));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_FLOAT)
+    {
+        FLOAT i = 0;
+        memcpy(&i, propertyBuffer, sizeof(FLOAT));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_DOUBLE)
+    {
+        DOUBLE i = 0;
+        memcpy(&i, propertyBuffer, sizeof(DOUBLE));
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_DECIMAL)
+    {
+        DECIMAL d;
+        memcpy(&d, propertyBuffer, sizeof(DECIMAL));
+        ULONGLONG ret = (ULONGLONG(d.Lo64) + ULONGLONG(d.Hi32) * ULONGLONG(pow(10, d.scale)));
+        if (d.sign == 1)
+        {
+            return std::to_string(ret);
+        }
+        else
+        {
+            return "-" + std::to_string(ret);
+        }
+    }
+    else if (propertyType == DEVPROP_TYPE_GUID)
+    {
+        GUID d;
+        memcpy(&d, propertyBuffer, sizeof(GUID));
+        return guidToString(d);
+    }
+    else if (propertyType == DEVPROP_TYPE_CURRENCY)
+    {
+        CURRENCY d;
+        memcpy(&d, propertyBuffer, sizeof(CURRENCY));
+        return std::to_string(d.int64);
+    }
+    else if (propertyType == DEVPROP_TYPE_DATE)
+    {
+        DATE d;
+        memcpy(&d, propertyBuffer, sizeof(DATE));
+        return std::to_string(d);
+    }
+    else if (propertyType == DEVPROP_TYPE_FILETIME)
+    {
+        FILETIME d;
+        memcpy(&d, propertyBuffer, sizeof(FILETIME));
+        SYSTEMTIME systemTime;
+        if (FileTimeToSystemTime(&d, &systemTime))
+        {
+            return (std::to_string(systemTime.wMonth) + "/" + std::to_string(systemTime.wDay) + "/" + std::to_string(systemTime.wYear) + \
+                " - " + std::to_string(systemTime.wHour) + "-" + std::to_string(systemTime.wMinute) + "-" + std::to_string(systemTime.wSecond) + "." + \
+                std::to_string(systemTime.wMilliseconds));
+        }
+        else
+        {
+            return "Unable to convert FILETIME";
+        }
+    }
+    else if (propertyType == DEVPROP_TYPE_BOOLEAN)
+    {
+        if (propertyBuffer[0] == 0)
+        {
+            return "False";
+        }
+        else
+        {
+            return "True";
+        }
+    }
+    else if (propertyType == DEVPROP_TYPE_STRING)
+    {
+        return rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
+    }
+    else if (propertyType == DEVPROP_TYPE_STRING_LIST)
+    {
+        std::string retStr = rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
+        // Handle \0 delimited lists
+        std::replace(retStr.begin(), retStr.end(), '\0', '\n');
+        retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
+
+        return retStr;
+    }
+    else if (propertyType == DEVPROP_TYPE_SECURITY_DESCRIPTOR)
+    {
+        SECURITY_DESCRIPTOR securityDescriptor;
+        memcpy(&securityDescriptor, propertyBuffer, sizeof(SECURITY_DESCRIPTOR));
+        ULONG retStrLen = 1000;
+        std::string retStr(" ", retStrLen);
+        if (ConvertSecurityDescriptorToStringSecurityDescriptor(&securityDescriptor, SDDL_REVISION_1, OWNER_SECURITY_INFORMATION, (char**)retStr.data(), &retStrLen))
+        {
+            return std::string(retStr.data(), retStrLen);
+        }
+        else
+        {
+            return "Unable to convert SECURITY_DESCRIPTOR";
+        }
+    }
+    else if (propertyType == DEVPROP_TYPE_SECURITY_DESCRIPTOR_STRING)
+    {
+        return rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
+    }
+    else if (propertyType == DEVPROP_TYPE_DEVPROPKEY)
+    {
+        DEVPROPKEY d;
+        memcpy(&d, propertyBuffer, sizeof(DEVPROPKEY));
+        return propertyKeyToString(d);
+    }
+    else if (propertyType == DEVPROP_TYPE_DEVPROPTYPE)
+    {
+        DEVPROPTYPE d;
+        memcpy(&d, propertyBuffer, sizeof(DEVPROPTYPE));
+        return std::to_string(d);
+    }
+    else if (propertyType == DEVPROP_TYPE_BINARY)
+    {
+        std::string retStr;
+
+        for (size_t i = 0; i < propertyBufferSize; i++)
+        {
+            char buf[4];
+            snprintf(buf, sizeof(buf), "%02X ", propertyBuffer[i]);
+            retStr += buf;
+        }
+
+        return retStr;
+    }
+    else if (propertyType == DEVPROP_TYPE_ERROR)
+    {
+        UINT32 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(UINT32));
+
+        return windowsErrorToString(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_NTSTATUS)
+    {
+        UINT32 i = 0;
+        memcpy(&i, propertyBuffer, sizeof(UINT32));
+
+        return std::to_string(i);
+    }
+    else if (propertyType == DEVPROP_TYPE_STRING_INDIRECT)
+    {
+        return rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
+    }
+
+    return rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
+
 }

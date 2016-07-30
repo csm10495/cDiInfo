@@ -74,8 +74,8 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
             // Handle \0 delimited lists
             std::replace(retStr.begin(), retStr.end(), '\0', '\n');
             retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
-
-            return retStr;
+            
+            return rTrim(retStr);
         }
         else if (retType == _GUID_)
         {
@@ -85,8 +85,7 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
         else if (retType == __WSTRING_)
         {
             std::wstring tmpWStr((wchar_t*)retStr.c_str());
-            retStr = std::string(tmpWStr.begin(), tmpWStr.end());
-            return retStr;
+            return wStringToString(tmpWStr);
         }
     }
     return std::string(UNAVAILABLE_ATTRIBUTE);
@@ -163,8 +162,8 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     addToMap(devAttrMap, Unused2);
     std::string Class = getDevInfoProperty(devs, &devInfo, SPDRP_CLASS, __STRING_);
     addToMap(devAttrMap, Class);
-    std::string Classguid = getDevInfoProperty(devs, &devInfo, SPDRP_CLASSGUID, __STRING_);
-    addToMap(devAttrMap, Classguid);
+    std::string ClassGuid = getDevInfoProperty(devs, &devInfo, SPDRP_CLASSGUID, __STRING_);
+    addToMap(devAttrMap, ClassGuid);
     std::string Driver = getDevInfoProperty(devs, &devInfo, SPDRP_DRIVER, __STRING_);
     addToMap(devAttrMap, Driver);
     std::string Configflags = getDevInfoProperty(devs, &devInfo, SPDRP_CONFIGFLAGS, _INT_);
@@ -217,8 +216,8 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     addToMap(devAttrMap, InstallState);
     std::string LocationPaths = getDevInfoProperty(devs, &devInfo, SPDRP_LOCATION_PATHS, __STRING_);
     addToMap(devAttrMap, LocationPaths);
-    std::string BaseContainerid = getDevInfoProperty(devs, &devInfo, SPDRP_BASE_CONTAINERID, __WSTRING_);
-    addToMap(devAttrMap, BaseContainerid);
+    std::string BaseContainerId = getDevInfoProperty(devs, &devInfo, SPDRP_BASE_CONTAINERID, __WSTRING_);
+    addToMap(devAttrMap, BaseContainerId);
 
     std::string DeviceId = getDeviceId(devInfo.DevInst);
     addToMap(devAttrMap, DeviceId);
@@ -331,7 +330,78 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     memcpy((void*)__devInfoDataString.c_str(), &devInfo, sizeof(SP_DEVINFO_DATA));
     addToMap(devAttrMap, __devInfoDataString);
 
+    // Get DevNode Property Keys
+    AddOtherDevNodeProperties(devAttrMap, devInfo.DevInst);
+
     return devAttrMap;
+}
+
+void AddOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst)
+{
+    // First get number of properties
+    ULONG propertyKeyCount = 0;
+    CONFIGRET retVal = CM_Get_DevNode_Property_Keys(devInst, NULL, &propertyKeyCount, 0);
+    if (retVal != CR_BUFFER_SMALL)
+    {
+        return;
+    }
+
+    // delete me later!
+    DEVPROPKEY *propertyKeyArray = new DEVPROPKEY[propertyKeyCount];
+
+    if (CM_Get_DevNode_Property_Keys(devInst, propertyKeyArray, &propertyKeyCount, 0) != CR_SUCCESS)
+    {
+        goto end;
+    }
+
+    size_t numUnknownKeys = 0;
+    for (size_t i = 0; i < propertyKeyCount; i++)
+    {
+        DEVPROPTYPE propertyType;
+        ULONG propertyBufferSize = 0;
+        if (CM_Get_DevNode_PropertyW(devInst, &propertyKeyArray[i], &propertyType, NULL, &propertyBufferSize, 0) != CR_BUFFER_SMALL)
+        {
+            continue;
+        }
+
+        BYTE* propertyBuffer = new BYTE[propertyBufferSize];
+        if (CM_Get_DevNode_PropertyW(devInst, &propertyKeyArray[i], &propertyType, propertyBuffer, &propertyBufferSize, 0) != CR_SUCCESS)
+        {
+            delete[] propertyBuffer;
+            continue;
+        }
+
+        std::string key = propertyKeyToString(propertyKeyArray[i]);
+        std::string value = propertyBufferToString(propertyBuffer, propertyBufferSize, propertyType);
+        std::string modifiedKey;
+        size_t underscoreLoc = key.find("_") + 1;
+        if (underscoreLoc == std::string::npos)
+        {
+            modifiedKey = key;
+        }
+        else
+        {
+            modifiedKey = key.substr(underscoreLoc);
+        }
+
+        if (attributeMap.find(modifiedKey) == attributeMap.end())
+        {
+            attributeMap[modifiedKey] = value;
+        }
+        else // the modified key is in the map already. If it's value matches this one don't add.
+             // If the value doesn't match add this value under the original (non-modified) key
+        {
+            if (toUpper(std::string(attributeMap[modifiedKey])) != toUpper(std::string(value)))
+            {
+                attributeMap[key] = value;
+            }
+        }
+
+        delete[] propertyBuffer;
+    }
+
+end:
+    delete[] propertyKeyArray;
 }
 
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)

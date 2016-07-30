@@ -14,7 +14,6 @@
 // STL includes
 #include <algorithm>
 #include <map>
-#include <regex>
 #include <string>
 #include <vector>
 
@@ -66,6 +65,9 @@ std::string getDeviceId(DEVINST &devInst);
 // Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
 //   this is a collection of 'attributes'
 AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
+
+// Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap;
+void AddOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst);
 
 // Gets a vector of interfaces based on the given GUID. If the GUID is GUID_NULL, all DEVINTERFACE GUIDs will be used
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid);

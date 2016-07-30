@@ -7,11 +7,17 @@
 
 // STL includes
 #include <algorithm>
+#include <regex>
 #include <string>
 #include <iostream>
 
 // WinApi includes
 #include <Windows.h>
+#define INITGUID //Define to make the DEVPKEYs work properly
+#include <Devpropdef.h>
+#include <devpkey.h>
+#undef INITGUID
+#include <sddl.h>
 
 // Right trims the given string (by reference) and returns it
 std::string &rTrim(std::string &s);
@@ -33,5 +39,18 @@ std::string nodeStatusToString(unsigned long status);
 
 // Gets the string for the CM return value
 std::string cmRetValueToString(unsigned long value);
+
+// Converts a Windows error to string
+std::string windowsErrorToString(uint32_t errorCode);
+
+// Converts a wide string to normal string
+std::string wStringToString(std::wstring wStr);
+
+// converts a DEVPROPKEY to string
+std::string propertyKeyToString(DEVPROPKEY propertyKey);
+
+// Gets a string representation of the given propertyBuffer depending on the propertyType
+std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSize, DEVPROPTYPE propertyType);
+
 
 
