@@ -758,11 +758,11 @@ std::string propertyKeyToString(DEVPROPKEY propertyKey)
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_LocationInfo, propertyKey))
     {
-        return "Device_LocationInfo";
+        return "Device_LocationInformation";
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_PDOName, propertyKey))
     {
-        return "Device_PDOName";
+        return "Device_PhysicalDeviceObjectName";
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_Capabilities, propertyKey))
     {
@@ -770,7 +770,7 @@ std::string propertyKeyToString(DEVPROPKEY propertyKey)
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_UINumber, propertyKey))
     {
-        return "Device_UINumber";
+        return "Device_UiNumber";
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_UpperFilters, propertyKey))
     {
