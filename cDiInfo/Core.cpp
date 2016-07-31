@@ -795,15 +795,35 @@ AttributeMap getAttributeMapWith(std::string key, std::string value)
     std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
     for (auto &deviceAttrMap : devicesAttributeMap)
     {
-        if (deviceAttrMap.find(key) != deviceAttrMap.end())
+        auto itr = deviceAttrMap.find(key);
+        if (itr != deviceAttrMap.end())
         {
-            if (toUpper(rTrim(deviceAttrMap[key])) == toUpper(rTrim(value)))
+            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
             {
                 return deviceAttrMap;
             }
         }
     }
     return AttributeMap();
+}
+
+std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value)
+{
+    std::vector<AttributeMap> matchingAttributeMaps;
+
+    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
+    for (auto &deviceAttrMap : devicesAttributeMap)
+    {
+        auto itr = deviceAttrMap.find(key);
+        if (itr != deviceAttrMap.end())
+        {
+            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            {
+                matchingAttributeMaps.push_back(deviceAttrMap);
+            }
+        }
+    }
+    return matchingAttributeMaps;
 }
 
 DEVINST getDevInstWith(std::string key, std::string value)

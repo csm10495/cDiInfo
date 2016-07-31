@@ -72,6 +72,14 @@ int main(int argc, char** argv)
         AttributeMap &deviceAttrMap = getAttributeMapWith(argv[2], argv[3]);
         printAttributeMap(deviceAttrMap);
     }
+    else if (argc == 4 && std::string(argv[1]) == "-getAll")
+    {
+        std::vector<AttributeMap> &attributeMaps = getAttributeMapsWith(argv[2], argv[3]);
+        for (auto i : attributeMaps)
+        {
+            printAttributeMap(i);
+        }
+    }
     else
     {
         printUsage(argc, argv);

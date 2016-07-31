@@ -720,7 +720,6 @@ std::wstring stringToWString(std::string str)
 
 std::string propertyKeyToString(DEVPROPKEY propertyKey)
 {
-
     if (IsEqualDevPropKey(DEVPKEY_Device_DeviceDesc, propertyKey))
     {
         return "Device_DeviceDesc";

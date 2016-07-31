@@ -20,6 +20,7 @@
 // WinApi Includes
 #include <Windows.h>
 #include <cfgmgr32.h>
+#include <DbgHelp.h>
 #pragma warning ( push )
 #pragma warning( disable: 4091 )
 #include <Ntddscsi.h> // Disable the warning this throws
@@ -86,6 +87,9 @@ void printAttributeMap(AttributeMap &attrMap);
 
 // Gets a AttributeMap that has a matching key and value in it's AttributeMap
 AttributeMap getAttributeMapWith(std::string key, std::string value);
+
+// Gets all AttributeMaps that have a matching key and value
+std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value);
 
 // Gets a DEVINST that has a matching key and value in it's AttributeMap
 DEVINST getDevInstWith(std::string key, std::string value);
