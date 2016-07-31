@@ -290,6 +290,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     {
         SiblingDeviceIds = NO_SIBLINGS;
     }
+    rTrim(SiblingDeviceIds);
     addToMap(devAttrMap, SiblingDeviceIds);
 
     SP_DRVINFO_DATA driverInfoData = { 0 };
@@ -336,8 +337,6 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     std::string __devInfoDataString(sizeof(SP_DEVINFO_DATA), '0');
     memcpy((void*)__devInfoDataString.c_str(), &devInfo, sizeof(SP_DEVINFO_DATA));
     addToMap(devAttrMap, __devInfoDataString);
-
-
 
     // Get DevNode Property Keys
     addOtherDevNodeProperties(devAttrMap, devInfo.DevInst);
@@ -739,9 +738,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
 
             for (auto &i : completeDevicesAttrMap)
             {
-                if (i["HardwareId"] == devAttrMap["HardwareId"] && i["CompatibleIds"] == devAttrMap["CompatibleIds"] && i["BusTypeGuid"] == devAttrMap["BusTypeGuid"] &&
-                    i["LocationPaths"] == devAttrMap["LocationPaths"] && i["PhysicalDeviceObjectName"] == devAttrMap["PhysicalDeviceObjectName"] &&
-                    i["LocationInformation"] == devAttrMap["LocationInformation"])
+                if (i["DeviceId"] == devAttrMap["DeviceId"])
                 {
                     addToAttrMap = false;
                     break;

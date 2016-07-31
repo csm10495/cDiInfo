@@ -5,18 +5,13 @@
 */
 
 // Local includes
-#include "Core.h"
-#include "Enumerations.h"
-#include "Features.h"
-#include "Registry.h"
 #include "Source.h"
-#include "Strings.h"
 
 // Prints usage information
 void printUsage(int argc, char** argv)
 {
     std::cout << "cDiInfo: A program that gets information using the SetupDi... WinApi calls." << std::endl;
-    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -get] [<key> <value>]" << std::endl;
+    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | getAll] [<key> <value>]" << std::endl;
     std::cout << "Key and value used if applying to a specific device" << std::endl;
     std::cout << "You gave " << argc << " arg(s)." << std::endl;
 }
