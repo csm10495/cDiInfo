@@ -74,7 +74,7 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
             // Handle \0 delimited lists
             std::replace(retStr.begin(), retStr.end(), '\0', '\n');
             retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
-            
+
             return rTrim(retStr);
         }
         else if (retType == _GUID_)
@@ -166,8 +166,8 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     addToMap(devAttrMap, ClassGuid);
     std::string Driver = getDevInfoProperty(devs, &devInfo, SPDRP_DRIVER, __STRING_);
     addToMap(devAttrMap, Driver);
-    std::string Configflags = getDevInfoProperty(devs, &devInfo, SPDRP_CONFIGFLAGS, _INT_);
-    addToMap(devAttrMap, Configflags);
+    std::string ConfigFlags = getDevInfoProperty(devs, &devInfo, SPDRP_CONFIGFLAGS, _INT_);
+    addToMap(devAttrMap, ConfigFlags);
     std::string Manufacturer = getDevInfoProperty(devs, &devInfo, SPDRP_MFG, __STRING_);
     addToMap(devAttrMap, Manufacturer);
     std::string LocationInformation = getDevInfoProperty(devs, &devInfo, SPDRP_LOCATION_INFORMATION, __STRING_);
@@ -330,13 +330,18 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     memcpy((void*)__devInfoDataString.c_str(), &devInfo, sizeof(SP_DEVINFO_DATA));
     addToMap(devAttrMap, __devInfoDataString);
 
+
+
     // Get DevNode Property Keys
-    AddOtherDevNodeProperties(devAttrMap, devInfo.DevInst);
+    addOtherDevNodeProperties(devAttrMap, devInfo.DevInst);
+
+    // Get Resource Descriptor Data
+    addLogicalConfigurationAndResources(devAttrMap, devInfo.DevInst);
 
     return devAttrMap;
 }
 
-void AddOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst)
+void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst)
 {
     // First get number of properties
     ULONG propertyKeyCount = 0;
@@ -402,6 +407,78 @@ void AddOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst)
 
 end:
     delete[] propertyKeyArray;
+}
+
+void addLogicalConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst)
+{
+    LOG_CONF  firstLogConf;
+    CONFIGRET cmRet = CM_Get_First_Log_Conf(&firstLogConf, devInst, ALLOC_LOG_CONF);
+    if (cmRet != CR_SUCCESS)
+    {
+        return;
+    };
+
+    while (true)
+    {
+        LOG_CONF nextLogConf;
+        RESOURCEID resourceType;
+        cmRet = CM_Get_Next_Res_Des(&nextLogConf, firstLogConf, ResType_All, &resourceType, 0);
+        if (cmRet != CR_SUCCESS)
+        {
+            CM_Free_Res_Des_Handle(firstLogConf);
+            CM_Free_Log_Conf_Handle(firstLogConf);
+            return;
+        };
+
+        while (true)
+        {
+            ULONG bufferSize = 0;
+            cmRet = CM_Get_Res_Des_Data_Size(&bufferSize, nextLogConf, 0);
+            if (cmRet != CR_SUCCESS)
+            {
+                CM_Free_Res_Des_Handle(nextLogConf);
+                break;
+            };
+
+            BYTE* buffer = new BYTE[bufferSize];
+            cmRet = CM_Get_Res_Des_Data(nextLogConf, buffer, bufferSize, 0);
+            if (cmRet != CR_SUCCESS)
+            {
+                CM_Free_Res_Des_Handle(nextLogConf);
+                delete[] buffer;
+                continue;
+            }
+
+            //std::cout << byteArrayToString(buffer, bufferSize) << std::endl;
+            std::string resourceTypeAsString = resourceTypeToString(resourceType);
+            std::string resourceTypeAsStringWithNumber = resourceTypeAsString + "0";
+            std::string resourceAsString = resourceToString(buffer, bufferSize, resourceType);
+            delete[] buffer;
+
+            while (attributeMap.find(resourceTypeAsStringWithNumber) != attributeMap.end())
+            {
+                int endNum = atoi(resourceTypeAsStringWithNumber.substr(resourceTypeAsString.size()).c_str());
+                endNum++;
+                resourceTypeAsStringWithNumber = resourceTypeAsString + std::to_string(endNum);
+            }
+            attributeMap[resourceTypeAsStringWithNumber] = resourceAsString;
+
+
+            if (CM_Get_Next_Res_Des(&nextLogConf, nextLogConf, ResType_All, &resourceType, 0) != CR_SUCCESS)
+            {
+                CM_Free_Res_Des_Handle(nextLogConf);
+                break;
+            }
+        }
+
+        auto a = CM_Get_Next_Log_Conf(&nextLogConf, firstLogConf, 0);
+        if (a != CR_SUCCESS)
+        {
+            break;
+        }
+    }
+    CM_Free_Log_Conf_Handle(firstLogConf);
+
 }
 
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
@@ -616,7 +693,14 @@ void printAttributeMap(AttributeMap &attrMap)
         if (!startsWith("__", i.first, true))
         {
             std::string value = i.second;
-            value = std::regex_replace(value, std::regex("\n"), "\n                           ");
+
+            std::string spaces = "                           ";
+            while (spaces.size() < i.first.size() + 2)
+            {
+                spaces += " ";
+            }
+
+            value = std::regex_replace(value, std::regex("\n"), "\n" + spaces);
             value = std::regex_replace(value, std::regex("\n\n"), "\n");
 
             printf("%-25s: %s\n", i.first.c_str(), value.c_str());

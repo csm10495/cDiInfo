@@ -66,8 +66,11 @@ std::string getDeviceId(DEVINST &devInst);
 //   this is a collection of 'attributes'
 AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
 
-// Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap;
-void AddOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst);
+// Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap
+void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst);
+
+// Goes through all resouce descriptors and adds their info to the AttributeMap
+void addLogicalConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst);
 
 // Gets a vector of interfaces based on the given GUID. If the GUID is GUID_NULL, all DEVINTERFACE GUIDs will be used
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid);

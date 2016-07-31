@@ -822,7 +822,7 @@ std::string propertyKeyToString(DEVPROPKEY propertyKey)
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_UINumberDescFormat, propertyKey))
     {
-        return "Device_UINumberDescFormat";
+        return "Device_UiNumberDescFormat";
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_PowerData, propertyKey))
     {
@@ -1639,16 +1639,7 @@ std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSiz
     }
     else if (propertyType == DEVPROP_TYPE_BINARY)
     {
-        std::string retStr;
-
-        for (size_t i = 0; i < propertyBufferSize; i++)
-        {
-            char buf[4];
-            snprintf(buf, sizeof(buf), "%02X ", propertyBuffer[i]);
-            retStr += buf;
-        }
-
-        return retStr;
+        return byteArrayToString(propertyBuffer, propertyBufferSize);
     }
     else if (propertyType == DEVPROP_TYPE_ERROR)
     {
@@ -1671,4 +1662,285 @@ std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSiz
 
     return rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
 
+}
+
+std::string byteArrayToString(BYTE* buffer, ULONG bufferSize)
+{
+    if (bufferSize == 0)
+    {
+        return ZERO_LENGTH_BUFFER;
+    }
+
+    std::string retStr;
+    std::string characterLine = "";
+    for (size_t i = 0; i < bufferSize; i++)
+    {
+        char buf[4];
+        snprintf(buf, sizeof(buf), "%02X ", buffer[i]);
+        if (i != 0 && i % 8 == 0)
+        {
+            retStr += " " + characterLine + "\n";
+            characterLine = "";
+        }
+        if (buffer[i] >= 32 && buffer[i] <= 126)
+        {
+            characterLine += (char)buffer[i];
+        }
+        else
+        {
+            characterLine += ".";
+        }
+        retStr += buf;
+    }
+    while (retStr.size() < 24)
+    {
+        retStr += " ";
+    }
+
+    return retStr + " " + characterLine;
+}
+
+std::string resourceTypeToString(RESOURCEID resourceType)
+{
+    if (resourceType == 0)
+    {
+        return "ResType_All";
+    }
+    if (resourceType == 1)
+    {
+        return "ResType_Mem";
+    }
+    if (resourceType == 2)
+    {
+        return "ResType_IO";
+    }
+    if (resourceType == 3)
+    {
+        return "ResType_DMA";
+    }
+    if (resourceType == 4)
+    {
+        return "ResType_IRQ";
+    }
+    if (resourceType == 5)
+    {
+        return "ResType_DoNotUse";
+    }
+    if (resourceType == 6)
+    {
+        return "ResType_BusNumber";
+    }
+    if (resourceType == 7)
+    {
+        return "ResType_MemLarge";
+    }
+    if (resourceType == 0x00008000)
+    {
+        return "ResType_Ignored_Bit";
+    }
+    if (resourceType == 0x0000FFFF)
+    {
+        return "ResType_ClassSpecific";
+    }
+    if (resourceType == 0x00008001)
+    {
+        return "ResType_DevicePrivate";
+    }
+    if (resourceType == 0x00008002)
+    {
+        return "ResType_PcCardConfig";
+    }
+    if (resourceType == 0x00008003)
+    {
+        return "ResType_MfCardConfig";
+    }
+    if (resourceType == 0x00008004)
+    {
+        return "ResType_Connection";
+    }
+
+    return "ResType_Unknown";
+}
+
+std::string resourceToString(BYTE* buffer, ULONG bufferSize, RESOURCEID resourceType)
+{
+    if (resourceType == ResType_BusNumber)
+    {
+        PBUSNUMBER_DES pBusNumberDes = (PBUSNUMBER_DES)buffer;
+        std::string retStr = "Bus Range: " + numToHexString(pBusNumberDes->BUSD_Alloc_Base, 8) + " - " + numToHexString(pBusNumberDes->BUSD_Alloc_End, 8);
+        return retStr;
+    }
+    else if (resourceType == ResType_ClassSpecific)
+    {
+        PCS_DES pCSDes = (PCS_DES)buffer;
+        std::string retStr = "GUID: " + guidToString(pCSDes->CSD_ClassGuid) + "\n";
+        retStr += "Signature: " + std::string((char*)pCSDes->CSD_Signature, pCSDes->CSD_SignatureLength) + "\n";
+        retStr += "LegacyData: " + std::string((char*)(pCSDes->CSD_Signature + pCSDes->CSD_LegacyDataOffset), pCSDes->CSD_LegacyDataSize) + "\n";
+        return retStr;
+    }
+    else if (resourceType == ResType_DMA)
+    {
+        PDMA_DES pDmaDes = (PDMA_DES)buffer;
+        std::string retStr = "Allocated DMA Channel:" + numToHexString(pDmaDes->DD_Alloc_Chan, 8) + "\n";
+        retStr += "Flags: ";
+        if (pDmaDes->DD_Flags & fDD_BYTE)
+        {
+            retStr += "(8 bit DMA channel) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_WORD)
+        {
+            retStr += "(16 bit DMA channel) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_DWORD)
+        {
+            retStr += "(32 bit DMA channel) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_BYTE_AND_WORD)
+        {
+            retStr += "(8 and 16 bit DMA channel) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_NoBusMaster)
+        {
+            retStr += "(No bus mastering) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_BusMaster)
+        {
+            retStr += "(Bus mastering) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_TypeStandard)
+        {
+            retStr += "(Standard DMA) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_TypeA)
+        {
+            retStr += "(Type A DMA) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_TypeB)
+        {
+            retStr += "(Type B DMA) ";
+        }
+        if (pDmaDes->DD_Flags & fDD_TypeF)
+        {
+            retStr += "(Type F DMA) ";
+        }
+        return retStr;
+    }
+    else if (resourceType == ResType_IO)
+    {
+        PIO_DES pIoDes = (PIO_DES)buffer;
+        std::string retStr = "IO Port Address Range: " + numToHexString(pIoDes->IOD_Alloc_Base, 16) + " - " + numToHexString(pIoDes->IOD_Alloc_End, 16) + "\n";
+        retStr += "Flags: ";
+        if (pIoDes->IOD_DesFlags & fIOD_IO)
+        {
+            retStr += "(IO address space) ";
+        }
+        if (pIoDes->IOD_DesFlags & fIOD_Memory)
+        {
+            retStr += "(Memory addres space) ";
+        }
+        if (pIoDes->IOD_DesFlags & fIOD_10_BIT_DECODE)
+        {
+            retStr += "(Decodes 10 bits the port address) ";
+        }
+        if (pIoDes->IOD_DesFlags & fIOD_12_BIT_DECODE)
+        {
+            retStr += "(Decodes 12 bits the port address) ";
+        }
+        if (pIoDes->IOD_DesFlags & fIOD_16_BIT_DECODE)
+        {
+            retStr += "(Decodes 16 bits the port address) ";
+        }
+        if (pIoDes->IOD_DesFlags & fIOD_POSITIVE_DECODE)
+        {
+            retStr += "(Positive diode) ";
+        }
+        return retStr;
+    }
+    else if(resourceType == ResType_IRQ)
+    {
+        PIRQ_DES pIrqDes = (PIRQ_DES)buffer;
+        std::string retStr = "IRQ Line Number: " + numToHexString(pIrqDes->IRQD_Alloc_Num, 8) + "\n";
+        retStr += "IRQ Affinity: " + numToHexString(pIrqDes->IRQD_Affinity, 16) + "\n";
+        retStr += "Flags: ";
+        if (pIrqDes->IRQD_Flags & fIRQD_Exclusive)
+        {
+            retStr += "(IRQ line cannot be shared) ";
+        }
+        if (pIrqDes->IRQD_Flags & fIRQD_Share)
+        {
+            retStr += "(IRQ line can be shared) ";
+        }
+        if (pIrqDes->IRQD_Flags & fIRQD_Level)
+        {
+            retStr += "(IRQ line is level-triggered) ";
+        }
+        if (pIrqDes->IRQD_Flags & fIRQD_Edge)
+        {
+            retStr += "(IRQ line is edge-triggered) ";
+        }
+        return retStr;
+    }
+    else if (resourceType == ResType_Mem)
+    {
+        PMEM_DES pMemDes = (PMEM_DES)buffer;
+        std::string retStr = "Contiguous Physical Memory Address Range: " + numToHexString(pMemDes->MD_Alloc_Base, 16) + " - " + numToHexString(pMemDes->MD_Alloc_End, 16) + "\n";
+        retStr += "Flags: ";
+        if (pMemDes->MD_Flags & fMD_ROM)
+        {
+            retStr += "(Memory is read-only) ";
+        }
+        if (pMemDes->MD_Flags & fMD_RAM)
+        {
+            retStr += "(Memory is not read-only) ";
+        }
+        if (pMemDes->MD_Flags & fMD_ReadDisallowed)
+        {
+            retStr += "(Memory is write-only) ";
+        }
+        if (pMemDes->MD_Flags & fMD_ReadAllowed)
+        {
+            retStr += "(Memory is not write-only) ";
+        }
+        if (pMemDes->MD_Flags & fMD_24)
+        {
+            retStr += "(24 bit addressing) ";
+        }
+        if (pMemDes->MD_Flags & fMD_24)
+        {
+            retStr += "(32 bit addressing) ";
+        }
+        if (pMemDes->MD_Flags & fMD_PrefetchAllowed)
+        {
+            retStr += "(Memory range can be prefetched) ";
+        }
+        if (pMemDes->MD_Flags & fMD_PrefetchDisallowed)
+        {
+            retStr += "(Memory range cannot be prefetched) ";
+        }
+        if (pMemDes->MD_Flags & fMD_Cacheable)
+        {
+            retStr += "(Memory range can be cached) ";
+        }
+        if (pMemDes->MD_Flags & fMD_NonCacheable)
+        {
+            retStr += "(Memory range cannot be cached) ";
+        }
+        if (pMemDes->MD_Flags & fMD_CombinedWriteAllowed)
+        {
+            retStr += "(Combined write caching is allowed) ";
+        }
+        if (pMemDes->MD_Flags & fMD_CombinedWriteDisallowed)
+        {
+            retStr += "(Combined write caching is not allowed) ";
+        }
+        return retStr;
+    }
+    return byteArrayToString(buffer, bufferSize);
+}
+
+std::string numToHexString(UINT64 number, int width)
+{
+    std::stringstream sstream;
+    sstream << "0x" << std::setfill('0') << std::setw(width) << std::hex << std::uppercase << number;
+    return sstream.str();
 }
