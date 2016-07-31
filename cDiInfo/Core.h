@@ -43,7 +43,7 @@ typedef std::map<std::string, std::string> AttributeMap;
 // Used as a (sketchy) way of passing a DEVINST in a string vector
 #define DEVINFO_DATA_STRING "__devInfoDataString"
 // Take a map and add a given item. Use the name of the field as the key of the map.
-#define addToMap(map, itm) map[#itm] = itm
+#define addToMap(map, itm) if (itm != UNAVAILABLE_ATTRIBUTE){map[#itm] = itm;}
 
 // Get an HDEVINFO for all classes 
 HDEVINFO getAllClassesHDevInfo();
@@ -69,8 +69,11 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
 // Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap
 void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst);
 
-// Goes through all resouce descriptors and adds their info to the AttributeMap
-void addLogicalConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst);
+// Goes through all resouce descriptors for the device and adds their info to the AttributeMap
+void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst);
+
+// Goes through all resouce descriptors for the interface and adds their info to the AttributeMap
+void addInterfaceConfigurationAndResources(AttributeMap &attributeMap);
 
 // Gets a vector of interfaces based on the given GUID. If the GUID is GUID_NULL, all DEVINTERFACE GUIDs will be used
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid);

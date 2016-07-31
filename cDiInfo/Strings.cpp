@@ -713,6 +713,11 @@ std::string wStringToString(std::wstring wStr)
     return std::string(wStr.begin(), wStr.end());
 }
 
+std::wstring stringToWString(std::string str)
+{
+    return std::wstring(str.begin(), str.end());
+}
+
 std::string propertyKeyToString(DEVPROPKEY propertyKey)
 {
 
@@ -886,7 +891,7 @@ std::string propertyKeyToString(DEVPROPKEY propertyKey)
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_Children, propertyKey))
     {
-        return "Device_Children";
+        return "Device_ChildrenDeviceIds";
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_Siblings, propertyKey))
     {
@@ -1472,7 +1477,7 @@ std::string propertyKeyToString(DEVPROPKEY propertyKey)
     return (guidToString(propertyKey.fmtid) + "[" + std::to_string(propertyKey.pid) + "]");
 }
 
-std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSize, DEVPROPTYPE propertyType)
+std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSize, DEVPROPTYPE propertyType, DEVPROPKEY propertyKey)
 {
     if (propertyType == DEVPROP_TYPE_EMPTY || propertyType == DEVPROP_TYPE_NULL)
     {
@@ -1636,6 +1641,61 @@ std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSiz
         DEVPROPTYPE d;
         memcpy(&d, propertyBuffer, sizeof(DEVPROPTYPE));
         return std::to_string(d);
+    }
+    else if (propertyKey == DEVPKEY_Device_PowerData && propertyType == DEVPROP_TYPE_BINARY)
+    {
+        PCM_POWER_DATA cmPowerData = (PCM_POWER_DATA)propertyBuffer;
+        std::string retStr = "Most Recent Power State: " + powerStateToString(cmPowerData->PD_MostRecentPowerState) + "\n";
+        retStr += "Supported Capabilities: ";
+        if (cmPowerData->PD_Capabilities & PDCAP_D0_SUPPORTED)
+        {
+            retStr += "(D0) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_D1_SUPPORTED)
+        {
+            retStr += "(D1) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_D2_SUPPORTED)
+        {
+            retStr += "(D2) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_D3_SUPPORTED)
+        {
+            retStr += "(D3) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_WAKE_FROM_D0_SUPPORTED)
+        {
+            retStr += "(Wake from D0) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_WAKE_FROM_D1_SUPPORTED)
+        {
+            retStr += "(Wake from D1) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_WAKE_FROM_D2_SUPPORTED)
+        {
+            retStr += "(Wake from D2) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_WAKE_FROM_D3_SUPPORTED)
+        {
+            retStr += "(Wake from D3) ";
+        }
+        if (cmPowerData->PD_Capabilities & PDCAP_WARM_EJECT_SUPPORTED)
+        {
+            retStr += "(Warm eject) ";
+        }
+        retStr += "\n";
+        retStr += "Latency When Returning To D0 From D1: " + std::to_string(cmPowerData->PD_D1Latency) + " microseconds \n";
+        retStr += "Latency When Returning To D0 From D2: " + std::to_string(cmPowerData->PD_D2Latency) + " microseconds \n";
+        retStr += "Latency When Returning To D0 From D3: " + std::to_string(cmPowerData->PD_D3Latency) + " microseconds \n";
+
+        for (ULONG i = 0; i < POWER_SYSTEM_MAXIMUM; i++)
+        {
+            retStr += systemPowerStateToString(i) + ": " + powerStateToString(cmPowerData->PD_PowerStateMapping[i]) + "\n";
+        }
+
+        retStr += "Lowest State Where The Device Can Wake The System: " + systemPowerStateToString(cmPowerData->PD_DeepestSystemWake);
+
+        return retStr;
     }
     else if (propertyType == DEVPROP_TYPE_BINARY)
     {
@@ -1943,4 +2003,58 @@ std::string numToHexString(UINT64 number, int width)
     std::stringstream sstream;
     sstream << "0x" << std::setfill('0') << std::setw(width) << std::hex << std::uppercase << number;
     return sstream.str();
+}
+
+std::string powerStateToString(ULONG powerState)
+{
+    if (powerState == 0)
+    {
+        return "Unspecified device power state";
+    }
+    else if (powerState == 1)
+    {
+        return "Maximum device power state (D0)";
+    }
+    else if (powerState == 2)
+    {
+        return "Device sleeping state less than D0 and greater than D2 (D1)";
+    }
+    else if (powerState == 3)
+    {
+        return "Device sleeping state less than D1 and greater than D3 (D2)";
+    }
+    else if (powerState == 4)
+    {
+        return "Lowest powered device sleeping state (D3)";
+    }
+    else if (powerState == 5)
+    {
+        return "Power device maximum";
+    }
+
+    return "Unknown power state";
+}
+
+std::string systemPowerStateToString(ULONG tmp)
+{
+    switch (tmp)
+    {
+    case(SYSTEM_POWER_STATE::PowerSystemUnspecified):
+        return "Power System Unspecified";
+    case(SYSTEM_POWER_STATE::PowerSystemWorking):
+        return "Power System Working";
+    case(SYSTEM_POWER_STATE::PowerSystemSleeping1):
+        return "Power System Sleeping1";
+    case(SYSTEM_POWER_STATE::PowerSystemSleeping2):
+        return "Power System Sleeping2";
+    case(SYSTEM_POWER_STATE::PowerSystemSleeping3):
+        return "Power System Sleeping3";
+    case(SYSTEM_POWER_STATE::PowerSystemHibernate):
+        return "Power System Hibernate";
+    case(SYSTEM_POWER_STATE::PowerSystemShutdown):
+        return "Power System Shutdown";
+    case(SYSTEM_POWER_STATE::PowerSystemMaximum):
+        return "Power System Maximum";
+    }
+    return "Unknown Power System";
 }

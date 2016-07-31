@@ -58,12 +58,18 @@ HDEVINFO getInterfaceHDevInfo(GUID classGuid)
 
 std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD property, TYPE retType)
 {
-    char buffer[4096] = { 0 };
+    char buffer[8192] = { 0 };
     DWORD reqSize;
     DWORD dataType;
 
-    if (SetupDiGetDeviceRegistryProperty(devs, devInfo, property, &dataType, (LPBYTE)buffer, 4096, &reqSize))
+    if (SetupDiGetDeviceRegistryProperty(devs, devInfo, property, &dataType, (LPBYTE)buffer, 8192, &reqSize))
     {
+        // Special handling since this is a structure...
+        if (property == SPDRP_DEVICE_POWER_DATA)
+        {
+            return propertyBufferToString((BYTE*)buffer, 8192, DEVPROP_TYPE_BINARY, DEVPKEY_Device_PowerData);
+        }
+
         std::string retStr = std::string(buffer, reqSize);
         if (retType == _INT_)
         {
@@ -204,8 +210,8 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     addToMap(devAttrMap, Address);
     std::string UiNumberDescFormat = getDevInfoProperty(devs, &devInfo, SPDRP_UI_NUMBER_DESC_FORMAT, __STRING_);
     addToMap(devAttrMap, UiNumberDescFormat);
-    std::string DevicePowerData = getDevInfoProperty(devs, &devInfo, SPDRP_DEVICE_POWER_DATA, _INT_);
-    addToMap(devAttrMap, DevicePowerData);
+    std::string PowerData = getDevInfoProperty(devs, &devInfo, SPDRP_DEVICE_POWER_DATA, _INT_);
+    addToMap(devAttrMap, PowerData);
     std::string RemovalPolicy = getDevInfoProperty(devs, &devInfo, SPDRP_REMOVAL_POLICY, _INT_);
     addToMap(devAttrMap, RemovalPolicy);
     std::string RemovalPolicyHwDefault = getDevInfoProperty(devs, &devInfo, SPDRP_REMOVAL_POLICY_HW_DEFAULT, _INT_);
@@ -233,6 +239,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
             ChildrenDeviceIds += getDeviceId(childDevInst) + "\n";
         }
     }
+    rTrim(ChildrenDeviceIds);
     addToMap(devAttrMap, ChildrenDeviceIds);
 
     std::string ParentDeviceId = NO_PARENT;
@@ -336,7 +343,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     addOtherDevNodeProperties(devAttrMap, devInfo.DevInst);
 
     // Get Resource Descriptor Data
-    addLogicalConfigurationAndResources(devAttrMap, devInfo.DevInst);
+    addDeviceConfigurationAndResources(devAttrMap, devInfo.DevInst);
 
     return devAttrMap;
 }
@@ -377,7 +384,7 @@ void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst)
         }
 
         std::string key = propertyKeyToString(propertyKeyArray[i]);
-        std::string value = propertyBufferToString(propertyBuffer, propertyBufferSize, propertyType);
+        std::string value = propertyBufferToString(propertyBuffer, propertyBufferSize, propertyType, propertyKeyArray[i]);
         std::string modifiedKey;
         size_t underscoreLoc = key.find("_") + 1;
         if (underscoreLoc == std::string::npos)
@@ -409,7 +416,7 @@ end:
     delete[] propertyKeyArray;
 }
 
-void addLogicalConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst)
+void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst)
 {
     LOG_CONF  firstLogConf;
     CONFIGRET cmRet = CM_Get_First_Log_Conf(&firstLogConf, devInst, ALLOC_LOG_CONF);
@@ -449,7 +456,6 @@ void addLogicalConfigurationAndResources(AttributeMap &attributeMap, DEVINST &de
                 continue;
             }
 
-            //std::cout << byteArrayToString(buffer, bufferSize) << std::endl;
             std::string resourceTypeAsString = resourceTypeToString(resourceType);
             std::string resourceTypeAsStringWithNumber = resourceTypeAsString + "0";
             std::string resourceAsString = resourceToString(buffer, bufferSize, resourceType);
@@ -478,7 +484,79 @@ void addLogicalConfigurationAndResources(AttributeMap &attributeMap, DEVINST &de
         }
     }
     CM_Free_Log_Conf_Handle(firstLogConf);
+}
 
+void addInterfaceConfigurationAndResources(AttributeMap &attributeMap)
+{
+    // Make sure we have an interface path
+    auto itr = attributeMap.find("DevicePath");
+    if (itr == attributeMap.end())
+    {
+        return;
+    }
+    std::wstring interfacePath = stringToWString(itr->second);
+
+    // Get size of array
+    ULONG propertyKeyCount = 0;
+    if (CM_Get_Device_Interface_Property_KeysW(interfacePath.c_str(), NULL, &propertyKeyCount, 0) != CR_BUFFER_SMALL)
+    {
+        return;
+    }
+
+    // Get the array
+    DEVPROPKEY* propertyKeyArray = new DEVPROPKEY[propertyKeyCount];
+    if (CM_Get_Device_Interface_Property_KeysW(interfacePath.c_str(), propertyKeyArray, &propertyKeyCount, 0) != CR_SUCCESS)
+    {
+        delete[] propertyKeyArray;
+        return;
+    }
+
+    ULONG propertyBufferSize = 0;
+    // Get property values
+    for (size_t i = 0; i < propertyKeyCount; i++)
+    {
+        DEVPROPTYPE propertyType;
+        if (CM_Get_Device_Interface_PropertyW(interfacePath.c_str(), &propertyKeyArray[i], &propertyType, NULL, &propertyBufferSize, 0) != CR_BUFFER_SMALL)
+        {
+            continue;
+        }
+
+        BYTE* propertyBuffer = new BYTE[propertyBufferSize];
+        if (CM_Get_Device_Interface_PropertyW(interfacePath.c_str(), &propertyKeyArray[i], &propertyType, propertyBuffer, &propertyBufferSize, 0) != CR_SUCCESS)
+        {
+            delete[] propertyBuffer;
+            continue;
+        }
+
+        std::string key = propertyKeyToString(propertyKeyArray[i]);
+        std::string value = propertyBufferToString(propertyBuffer, propertyBufferSize, propertyType, propertyKeyArray[i]);
+        std::string modifiedKey;
+        size_t underscoreLoc = key.find("_") + 1;
+        if (underscoreLoc == std::string::npos)
+        {
+            modifiedKey = key;
+        }
+        else
+        {
+            modifiedKey = key.substr(underscoreLoc);
+        }
+
+        if (attributeMap.find(modifiedKey) == attributeMap.end())
+        {
+            attributeMap[modifiedKey] = value;
+        }
+        else // the modified key is in the map already. If it's value matches this one don't add.
+             // If the value doesn't match add this value under the original (non-modified) key
+        {
+            if (toUpper(std::string(attributeMap[modifiedKey])) != toUpper(std::string(value)))
+            {
+                attributeMap[key] = value;
+            }
+        }
+        delete[] propertyBuffer;
+    }
+
+    delete[] propertyKeyArray;
 }
 
 std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
@@ -487,7 +565,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
     if (classGuid == GUID_NULL)
     {
-        for (auto &guid : ALL_GUIDS)
+        for (auto guid : ALL_GUIDS)
         {
             std::vector<AttributeMap> devAttrMap = getInterfaceAttributeMap(guid);
             interfaces.insert(std::end(interfaces), std::begin(devAttrMap), std::end(devAttrMap));
@@ -553,6 +631,8 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
             AttributeMap devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
             std::string DevicePath = interfaceDetail->DevicePath;
             addToMap(devAttrMap, DevicePath);
+
+            addInterfaceConfigurationAndResources(devAttrMap);
 
             // See if we can find a PHYSICALDRIVE path
             HANDLE handle = CreateFile(DevicePath.c_str(),

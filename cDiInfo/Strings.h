@@ -56,11 +56,14 @@ std::string windowsErrorToString(uint32_t errorCode);
 // Converts a wide string to normal string
 std::string wStringToString(std::wstring wStr);
 
+// Converts a normal string to wide string
+std::wstring stringToWString(std::string wStr);
+
 // converts a DEVPROPKEY to string
 std::string propertyKeyToString(DEVPROPKEY propertyKey);
 
 // Gets a string representation of the given propertyBuffer depending on the propertyType
-std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSize, DEVPROPTYPE propertyType);
+std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSize, DEVPROPTYPE propertyType, DEVPROPKEY propertyKey);
 
 // Byte array to string table
 std::string byteArrayToString(BYTE* buffer, ULONG bufferSize);
@@ -73,3 +76,9 @@ std::string resourceToString(BYTE* buffer, ULONG bufferSize, RESOURCEID resource
 
 // Converts a number to a hex string with a given width
 std::string numToHexString(UINT64 number, int width);
+
+// Converts a power state to string
+std::string powerStateToString(ULONG powerState);
+
+// Converts a system power state to string
+std::string systemPowerStateToString(ULONG tmp);
