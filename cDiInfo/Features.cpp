@@ -7,10 +7,8 @@
 // Local includes
 #include "Features.h"
 
-STATUS disableDevice(std::string key, std::string value)
+STATUS disableDevice(DEVINST devInst)
 {
-    DEVINST devInst = getDevInstWith(key, value);
-
     if (devInst == NULL)
     {
         return FAILED_TO_GET_MATCHING_DEVINST;
@@ -29,10 +27,8 @@ STATUS disableDevice(std::string key, std::string value)
     }
 }
 
-STATUS enableDevice(std::string key, std::string value)
+STATUS enableDevice(DEVINST devInst)
 {
-    DEVINST devInst = getDevInstWith(key, value);
-
     if (devInst == NULL)
     {
         return FAILED_TO_GET_MATCHING_DEVINST;

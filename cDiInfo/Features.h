@@ -12,11 +12,11 @@
 // STL includes
 #include <vector>
 
-// Tries to disable a device with a key/value
-STATUS disableDevice(std::string key, std::string value);
+// Tries to disable a devInst
+STATUS disableDevice(DEVINST devInst);
 
-// Tries to enable a device with a key/value
-STATUS enableDevice(std::string key, std::string value);
+// Tries to enable a devInst
+STATUS enableDevice(DEVINST devInst);
 
 // Prints everything we can get about every device
 void printAllInfo();

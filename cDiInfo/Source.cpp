@@ -47,12 +47,24 @@ int main(int argc, char** argv)
     }
     else if (argc == 4 && std::string(argv[1]) == "-disable")
     {
-        STATUS s = disableDevice(argv[2], argv[3]);
+        DEVINST devInst = getDevInstWith(argv[2], argv[3]);
+        STATUS s = disableDevice(devInst);
         std::cout << getStatusStr(s) << std::endl;
     }
     else if (argc == 4 && std::string(argv[1]) == "-enable")
     {
-        STATUS s = enableDevice(argv[2], argv[3]);
+        DEVINST devInst = getDevInstWith(argv[2], argv[3]);
+        STATUS s = enableDevice(devInst);
+        std::cout << getStatusStr(s) << std::endl;
+    }
+    else if (argc == 4 && std::string(argv[1]) == "-restart")
+    {
+        DEVINST devInst = getDevInstWith(argv[2], argv[3]);
+        STATUS s = disableDevice(devInst);
+        if (s == STATUS::SUCCESS)
+        {
+            s = enableDevice(devInst);
+        }
         std::cout << getStatusStr(s) << std::endl;
     }
     else if (argc == 4 && std::string(argv[1]) == "-get")
