@@ -27,6 +27,7 @@
 #pragma warning( pop )
 #include <Ntddstor.h>
 #include <SetupAPI.h>
+#include <storduid.h>
 
 // This is missing from Ntddstor.h for some reason
 typedef struct _MEDIA_SERIAL_NUMBER_DATA {

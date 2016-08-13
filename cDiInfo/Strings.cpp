@@ -1912,7 +1912,7 @@ std::string resourceToString(BYTE* buffer, ULONG bufferSize, RESOURCEID resource
         }
         return retStr;
     }
-    else if(resourceType == ResType_IRQ)
+    else if (resourceType == ResType_IRQ)
     {
         PIRQ_DES pIrqDes = (PIRQ_DES)buffer;
         std::string retStr = "IRQ Line Number: " + numToHexString(pIrqDes->IRQD_Alloc_Num, 8) + "\n";
@@ -2073,4 +2073,78 @@ std::string toBoolString(UINT64 number)
     {
         return "False";
     }
+}
+
+std::string storageBusTypeToString(STORAGE_BUS_TYPE busType)
+{
+    if (busType == BusTypeScsi)
+    {
+        return "SCSI";
+    }
+    if (busType == BusTypeAtapi)
+    {
+        return "ATAPI";
+    }
+    if (busType == BusTypeAta)
+    {
+        return "ATA";
+    }
+    if (busType == BusType1394)
+    {
+        return "1394";
+    }
+    if (busType == BusTypeSsa)
+    {
+        return "SSA";
+    }
+    if (busType == BusTypeFibre)
+    {
+        return "Fibre";
+    }
+    if (busType == BusTypeUsb)
+    {
+        return "USB";
+    }
+    if (busType == BusTypeRAID)
+    {
+        return "RAID";
+    }
+    if (busType == BusTypeiScsi)
+    {
+        return "iSCSI";
+    }
+    if (busType == BusTypeSas)
+    {
+        return "SAS";
+    }
+    if (busType == BusTypeSata)
+    {
+        return "SATA";
+    }
+    if (busType == BusTypeSd)
+    {
+        return "SD";
+    }
+    if (busType == BusTypeMmc)
+    {
+        return "MMC";
+    }
+    if (busType == BusTypeVirtual)
+    {
+        return "Virtual";
+    }
+    if (busType == BusTypeFileBackedVirtual)
+    {
+        return "File Backed Virtual";
+    }
+    if (busType == BusTypeSpaces)
+    {
+        return "Spaces";
+    }
+    if (busType == BusTypeNvme)
+    {
+        return "NVMe";
+    }
+
+    return "Unknown";
 }

@@ -774,7 +774,70 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     std::string DiskLength = std::to_string(storageReadCapacity.DiskLength.QuadPart);
                     addToMap(devAttrMap, DiskLength);
                 }
+
+                // Get storage unique identifier
+                BYTE b[4096] = { 0 };
+                PSTORAGE_DEVICE_UNIQUE_IDENTIFIER pStorageDeviceUniqueIdentifer = (PSTORAGE_DEVICE_UNIQUE_IDENTIFIER)b;
+                STORAGE_PROPERTY_QUERY storagePropertyQuery;
+                memset(&storagePropertyQuery, 0, sizeof(STORAGE_PROPERTY_QUERY));
+                storagePropertyQuery.PropertyId = StorageDeviceUniqueIdProperty;
+                storagePropertyQuery.QueryType = PropertyStandardQuery;
+                if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL))
+                {
+                    PSTORAGE_DEVICE_ID_DESCRIPTOR pStorageDeviceIdDescriptor = (PSTORAGE_DEVICE_ID_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceIdOffset);
+                    
+                    PSTORAGE_DEVICE_DESCRIPTOR pStorageDeviceDescriptor = (PSTORAGE_DEVICE_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceOffset);
+
+                    std::string CommandQueueing = toBoolString(pStorageDeviceDescriptor->CommandQueueing);
+                    addToMap(devAttrMap, CommandQueueing);
+
+                    if (pStorageDeviceDescriptor->VendorIdOffset != 0)
+                    {
+                        std::string VendorId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->VendorIdOffset));
+                        addToMap(devAttrMap, VendorId);
+                    }
+
+                    if (pStorageDeviceDescriptor->ProductIdOffset != 0)
+                    {
+                        std::string ProductId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductIdOffset));
+                        addToMap(devAttrMap, ProductId);
+                    }
+
+                    if (pStorageDeviceDescriptor->ProductRevisionOffset != 0)
+                    {
+                        std::string ProductRevision = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductRevisionOffset));
+                        addToMap(devAttrMap, ProductRevision);
+                    }
+
+                    if (pStorageDeviceDescriptor->SerialNumberOffset != 0)
+                    {
+                        std::string SerialNumber = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->SerialNumberOffset + 1));
+                        addToMap(devAttrMap, SerialNumber);
+                    }
+
+                    std::string BusType = storageBusTypeToString(pStorageDeviceDescriptor->BusType);
+                    addToMap(devAttrMap, BusType);
+
+                    PSTORAGE_DEVICE_LAYOUT_SIGNATURE pStorageDeviceLayoutSignature = (PSTORAGE_DEVICE_LAYOUT_SIGNATURE)(b + pStorageDeviceUniqueIdentifer->DriveLayoutSignatureOffset);
+                    // If MBR give that info, otherwise give GPT GUID
+                    if (pStorageDeviceLayoutSignature->Mbr)
+                    {
+                        std::string MbrSignature = std::to_string(pStorageDeviceLayoutSignature->DeviceSpecific.MbrSignature);
+                        addToMap(devAttrMap, MbrSignature)
+                    }
+                    else
+                    {
+                        std::string GptDiskId = guidToString(pStorageDeviceLayoutSignature->DeviceSpecific.GptDiskId);
+                        addToMap(devAttrMap, GptDiskId);
+                    }
+
+                    // Everything together... useful because a user can use CompareStorageDuids(...) to check for exact/sub matches
+                    std::string StorageDUID = byteArrayToString(b, bytesReturned);
+                    addToMap(devAttrMap, StorageDUID);
+                }
+
                 CloseHandle(handle);
+
             }
             interfaces.push_back(devAttrMap);
         }

@@ -88,3 +88,6 @@ std::string delimitedStringToNewlineString(std::string& retStr);
 
 // Gets either True or False
 std::string toBoolString(UINT64 number);
+
+// Converts storage bus type to string
+std::string storageBusTypeToString(STORAGE_BUS_TYPE busType);
