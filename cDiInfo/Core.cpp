@@ -576,6 +576,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
     }
 
     HDEVINFO interfaceDevs = getInterfaceHDevInfo(classGuid);
+    std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
 
     if (interfaceDevs == INVALID_HANDLE_VALUE)
     {
@@ -625,13 +626,22 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
         interfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)buffer;
         interfaceDetail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 
-        std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
-
         if (SetupDiGetDeviceInterfaceDetail(interfaceDevs, &interfaceInfo, interfaceDetail, size, NULL, &devInfo))
         {
             AttributeMap devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
             std::string DevicePath = interfaceDetail->DevicePath;
             addToMap(devAttrMap, DevicePath);
+
+            char targetPaths[4096];
+            // substr(4) to get rid of the \\.\ 
+            DWORD targetPathsLength = QueryDosDevice(DevicePath.substr(4).c_str(), targetPaths, 4096);
+            if (targetPathsLength != 0)
+            {
+                std::string MSDosDeviceName = std::string(targetPaths, targetPathsLength);
+                std::replace(MSDosDeviceName.begin(), MSDosDeviceName.end(), '\0', '\n');
+                MSDosDeviceName = rTrim(std::regex_replace(MSDosDeviceName, std::regex("\n\n"), "\n"));
+                addToMap(devAttrMap, MSDosDeviceName);
+            }
 
             addInterfaceConfigurationAndResources(devAttrMap);
 
@@ -652,6 +662,16 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                 {
                     std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
                     addToMap(devAttrMap, PhysicalDrivePath);
+
+                    // substr(4) to get rid of the \\.\ 
+                    DWORD targetPathsLength = QueryDosDevice(PhysicalDrivePath.substr(4).c_str(), targetPaths, 4096);
+                    if (targetPathsLength != 0)
+                    {
+                        std::string MSDosPhysicalDriveDeviceName = std::string(targetPaths, targetPathsLength);
+                        std::replace(MSDosPhysicalDriveDeviceName.begin(), MSDosPhysicalDriveDeviceName.end(), '\0', '\n');
+                        MSDosPhysicalDriveDeviceName = rTrim(std::regex_replace(MSDosPhysicalDriveDeviceName, std::regex("\n\n"), "\n"));
+                        addToMap(devAttrMap, MSDosPhysicalDriveDeviceName);
+                    }
 
                     std::string PartitionNumber;
                     if (storageDeviceNumber.PartitionNumber == (DWORD)-1)
@@ -675,6 +695,16 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     {
                         std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiAddress.PortNumber) + ":";
                         addToMap(devAttrMap, ScsiAdapterPath);
+
+                        // substr(4) to get rid of the \\.\ 
+                        DWORD targetPathsLength = QueryDosDevice(ScsiAdapterPath.substr(4).c_str(), targetPaths, 4096);
+                        if (targetPathsLength != 0)
+                        {
+                            std::string MSDosAdapterName = std::string(targetPaths, targetPathsLength);
+                            std::replace(MSDosAdapterName.begin(), MSDosAdapterName.end(), '\0', '\n');
+                            MSDosAdapterName = rTrim(std::regex_replace(MSDosAdapterName, std::regex("\n\n"), "\n"));
+                            addToMap(devAttrMap, MSDosAdapterName);
+                        }
 
                         std::string ScsiPathId = std::to_string(scsiAddress.PathId);
                         addToMap(devAttrMap, ScsiPathId);
