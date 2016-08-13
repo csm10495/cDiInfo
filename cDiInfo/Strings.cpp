@@ -1604,10 +1604,7 @@ std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSiz
     else if (propertyType == DEVPROP_TYPE_STRING_LIST)
     {
         std::string retStr = rTrim(wStringToString(std::wstring((wchar_t*)propertyBuffer, propertyBufferSize / sizeof(wchar_t))));
-        // Handle \0 delimited lists
-        std::replace(retStr.begin(), retStr.end(), '\0', '\n');
-        retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
-
+        retStr = delimitedStringToNewlineString(retStr);
         return retStr;
     }
     else if (propertyType == DEVPROP_TYPE_SECURITY_DESCRIPTOR)
@@ -2056,4 +2053,24 @@ std::string systemPowerStateToString(ULONG tmp)
         return "Power System Maximum";
     }
     return "Unknown Power System";
+}
+
+std::string delimitedStringToNewlineString(std::string& retStr)
+{
+    std::replace(retStr.begin(), retStr.end(), '\0', '\n');
+    retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
+
+    return rTrim(retStr);
+}
+
+std::string toBoolString(UINT64 number)
+{
+    if (number)
+    {
+        return "True";
+    }
+    else
+    {
+        return "False";
+    }
 }

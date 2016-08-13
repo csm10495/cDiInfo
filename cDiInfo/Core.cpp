@@ -77,11 +77,7 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
         }
         else if (retType == __STRING_)
         {
-            // Handle \0 delimited lists
-            std::replace(retStr.begin(), retStr.end(), '\0', '\n');
-            retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
-
-            return rTrim(retStr);
+            return delimitedStringToNewlineString(retStr);
         }
         else if (retType == _GUID_)
         {
@@ -638,8 +634,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
             if (targetPathsLength != 0)
             {
                 std::string MSDosDeviceName = std::string(targetPaths, targetPathsLength);
-                std::replace(MSDosDeviceName.begin(), MSDosDeviceName.end(), '\0', '\n');
-                MSDosDeviceName = rTrim(std::regex_replace(MSDosDeviceName, std::regex("\n\n"), "\n"));
+                MSDosDeviceName = delimitedStringToNewlineString(MSDosDeviceName);
                 addToMap(devAttrMap, MSDosDeviceName);
             }
 
@@ -668,8 +663,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     if (targetPathsLength != 0)
                     {
                         std::string MSDosPhysicalDriveDeviceName = std::string(targetPaths, targetPathsLength);
-                        std::replace(MSDosPhysicalDriveDeviceName.begin(), MSDosPhysicalDriveDeviceName.end(), '\0', '\n');
-                        MSDosPhysicalDriveDeviceName = rTrim(std::regex_replace(MSDosPhysicalDriveDeviceName, std::regex("\n\n"), "\n"));
+                        MSDosPhysicalDriveDeviceName = delimitedStringToNewlineString(MSDosPhysicalDriveDeviceName);
                         addToMap(devAttrMap, MSDosPhysicalDriveDeviceName);
                     }
 
@@ -701,8 +695,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                         if (targetPathsLength != 0)
                         {
                             std::string MSDosAdapterName = std::string(targetPaths, targetPathsLength);
-                            std::replace(MSDosAdapterName.begin(), MSDosAdapterName.end(), '\0', '\n');
-                            MSDosAdapterName = rTrim(std::regex_replace(MSDosAdapterName, std::regex("\n\n"), "\n"));
+                            MSDosAdapterName = delimitedStringToNewlineString(MSDosAdapterName);
                             addToMap(devAttrMap, MSDosAdapterName);
                         }
 
@@ -717,6 +710,32 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                         std::string ScsiPortNumber = std::to_string(scsiAddress.PortNumber);
                         addToMap(devAttrMap, ScsiPortNumber);
+
+                        // Get IO_SCSI_CAPABILITIES
+                        IO_SCSI_CAPABILITIES ioScsiCapabilities = { 0 };
+                        if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, &ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL))
+                        {
+                            std::string MaximumTransferLength = std::to_string(ioScsiCapabilities.MaximumTransferLength);
+                            addToMap(devAttrMap, MaximumTransferLength); 
+                            
+                            std::string MaximumPhysicalPages = std::to_string(ioScsiCapabilities.MaximumPhysicalPages);
+                            addToMap(devAttrMap, MaximumPhysicalPages); 
+                            
+                            std::string SupportedAsynchronousEvents = toBoolString(ioScsiCapabilities.SupportedAsynchronousEvents);
+                            addToMap(devAttrMap, SupportedAsynchronousEvents);
+
+                            std::string AlignmentMask = std::to_string(ioScsiCapabilities.AlignmentMask);
+                            addToMap(devAttrMap, AlignmentMask);
+
+                            std::string TaggedQueuing = toBoolString(ioScsiCapabilities.TaggedQueuing);
+                            addToMap(devAttrMap, TaggedQueuing);
+
+                            std::string AdapterScansDown = toBoolString(ioScsiCapabilities.AdapterScansDown);
+                            addToMap(devAttrMap, AdapterScansDown);
+
+                            std::string AdapterUsesPio = toBoolString(ioScsiCapabilities.AdapterUsesPio);
+                            addToMap(devAttrMap, AdapterUsesPio);
+                        }
                     }
                 }
 

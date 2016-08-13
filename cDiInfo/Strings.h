@@ -82,3 +82,9 @@ std::string powerStateToString(ULONG powerState);
 
 // Converts a system power state to string
 std::string systemPowerStateToString(ULONG tmp);
+
+// Converts a string delimited by \0 to newlines
+std::string delimitedStringToNewlineString(std::string& retStr);
+
+// Gets either True or False
+std::string toBoolString(UINT64 number);
