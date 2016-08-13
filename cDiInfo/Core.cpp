@@ -582,8 +582,8 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
     SP_DEVINFO_DATA devInfo;
     devInfo.cbSize = sizeof(SP_DEVINFO_DATA);
 
-    SP_INTERFACE_DEVICE_DATA interfaceInfo;
-    interfaceInfo.cbSize = sizeof(SP_INTERFACE_DEVICE_DATA);
+    SP_DEVICE_INTERFACE_DATA interfaceInfo;
+    interfaceInfo.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
     PSP_DEVICE_INTERFACE_DETAIL_DATA interfaceDetail = { 0 };
 
@@ -625,6 +625,10 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
         if (SetupDiGetDeviceInterfaceDetail(interfaceDevs, &interfaceInfo, interfaceDetail, size, NULL, &devInfo))
         {
             AttributeMap devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
+
+            std::string InterfaceClassGuid = guidToString(interfaceInfo.InterfaceClassGuid);
+            addToMap(devAttrMap, InterfaceClassGuid);
+
             std::string DevicePath = interfaceDetail->DevicePath;
             addToMap(devAttrMap, DevicePath);
 
