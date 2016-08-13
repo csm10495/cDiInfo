@@ -25,7 +25,16 @@
 #pragma warning( disable: 4091 )
 #include <Ntddscsi.h> // Disable the warning this throws
 #pragma warning( pop )
+#include <Ntddstor.h>
 #include <SetupAPI.h>
+
+// This is missing from Ntddstor.h for some reason
+typedef struct _MEDIA_SERIAL_NUMBER_DATA {
+    ULONG SerialNumberLength;
+    ULONG Result;
+    ULONG Reserved[2];
+    UCHAR SerialNumberData[1];
+} MEDIA_SERIAL_NUMBER_DATA, *PMEDIA_SERIAL_NUMBER_DATA;
 
 // An AttributeMap is a map of string to string
 //   name of attribute -> string of attribute value

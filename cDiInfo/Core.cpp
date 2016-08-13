@@ -739,6 +739,41 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     }
                 }
 
+                // Get hotplug info
+                STORAGE_HOTPLUG_INFO storageHotplugInfo = { 0 };
+                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL))
+                {
+                    std::string MediaRemovable = toBoolString(storageHotplugInfo.MediaRemovable);
+                    addToMap(devAttrMap, MediaRemovable);
+
+                    std::string MediaHotplug = toBoolString(storageHotplugInfo.MediaHotplug);
+                    addToMap(devAttrMap, MediaHotplug);
+
+                    std::string DeviceHotplug = toBoolString(storageHotplugInfo.DeviceHotplug);
+                    addToMap(devAttrMap, DeviceHotplug);
+                }
+
+                // Get media serial number
+                MEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = { 0 };
+                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(MEDIA_SERIAL_NUMBER_DATA), &bytesReturned, NULL))
+                {
+                    std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData.SerialNumberData, mediaSerialNumberData.SerialNumberLength);
+                    addToMap(devAttrMap, MediaSerialNumber);
+                }
+
+                // Get media serial number
+                STORAGE_READ_CAPACITY storageReadCapacity = { 0 };
+                if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL))
+                {
+                    std::string BlockLength = std::to_string(storageReadCapacity.BlockLength);
+                    addToMap(devAttrMap, BlockLength);
+
+                    std::string NumberOfBlocks = std::to_string(storageReadCapacity.NumberOfBlocks.QuadPart);
+                    addToMap(devAttrMap, NumberOfBlocks);
+
+                    std::string DiskLength = std::to_string(storageReadCapacity.DiskLength.QuadPart);
+                    addToMap(devAttrMap, DiskLength);
+                }
                 CloseHandle(handle);
             }
             interfaces.push_back(devAttrMap);
