@@ -764,13 +764,13 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
         completeDevicesAttrMap = getInterfaceAttributeMap(GUID_NULL);
         for (int devIndex = 0; SetupDiEnumDeviceInfo(deviceDevs, devIndex, &devInfo); devIndex++)
         {
-            AttributeMap devAttrMap = getDeviceAttributeMap(deviceDevs, devInfo, scsiPortToDeviceIdMap);
+            std::string deviceId = getDeviceId(devInfo.DevInst);
 
             bool addToAttrMap = true;
 
             for (auto &i : completeDevicesAttrMap)
             {
-                if (i["DeviceId"] == devAttrMap["DeviceId"])
+                if (i["DeviceId"] == deviceId)
                 {
                     addToAttrMap = false;
                     break;
@@ -779,6 +779,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
 
             if (addToAttrMap)
             {
+                AttributeMap& devAttrMap = getDeviceAttributeMap(deviceDevs, devInfo, scsiPortToDeviceIdMap);
                 completeDevicesAttrMap.push_back(devAttrMap);
             }
         }
