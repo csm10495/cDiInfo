@@ -322,13 +322,15 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
         addToMap(devAttrMap, DriverType);
     }
 
-    // Try to get SCSI port info
+    // Try to get SCSI port info (this loop is only for getting the SCSI adapter/port for the controller itself, it's disks already have it)
     for (auto &scsiPortToDeviceId : scsiPortToDeviceIdMap)
     {
         if (toUpper(scsiPortToDeviceId.second) == toUpper(DeviceId))
         {
-            std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiPortToDeviceId.first) + ":";
+            std::string ScsiPortNumber = std::to_string(scsiPortToDeviceId.first);
+            std::string ScsiAdapterPath = "\\\\.\\SCSI" + ScsiPortNumber + ":";
             addToMap(devAttrMap, ScsiAdapterPath);
+            addToMap(devAttrMap, ScsiPortNumber);
             break;
         }
     }
@@ -783,7 +785,6 @@ void printAttributeMap(AttributeMap &attrMap)
             printf("%-25s: %s\n", i.first.c_str(), value.c_str());
         }
     }
-    std::cout << "*******************************************************" << std::endl;
     std::cout << "*******************************************************" << std::endl;
 }
 
