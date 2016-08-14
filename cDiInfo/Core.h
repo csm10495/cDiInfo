@@ -96,7 +96,7 @@ std::string getDeviceId(DEVINST &devInst);
 
 // Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
 //   this is a collection of 'attributes'
-AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
+AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
 
 // Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap
 void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST devInst);

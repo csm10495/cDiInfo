@@ -266,7 +266,7 @@ std::string getDeviceId(DEVINST &devInst)
     return UNAVAILABLE_ATTRIBUTE;
 }
 
-AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap)
+AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap)
 {
     AttributeMap devAttrMap;
 
@@ -1023,6 +1023,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
     SP_DEVINFO_DATA devInfo;
     devInfo.cbSize = sizeof(SP_DEVINFO_DATA);
 
+    std::future<std::vector<AttributeMap>> futureCompleteDevicesAttrMap;
     std::vector<AttributeMap> completeDevicesAttrMap;
 
     std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
@@ -1033,28 +1034,40 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
     }
 
     {
-        completeDevicesAttrMap = getInterfaceAttributeMap(GUID_NULL);
+        futureCompleteDevicesAttrMap = std::async(getInterfaceAttributeMap, GUID_NULL);
+
+        std::vector<std::future<AttributeMap>> devAttrMapsToAdd;
+
+        std::map<std::string, SP_DEVINFO_DATA> deviceIdToInfoData;
 
         for (int devIndex = 0; SetupDiEnumDeviceInfo(deviceDevs, devIndex, &devInfo); devIndex++)
         {
             std::string deviceId = getDeviceId(devInfo.DevInst);
+            deviceIdToInfoData[deviceId] = devInfo;
+        }
+        completeDevicesAttrMap = futureCompleteDevicesAttrMap.get();
 
-            bool addToAttrMap = true;
-
-            for (auto &i : completeDevicesAttrMap)
+        for (auto &dIAI : deviceIdToInfoData)
+        {
+            bool needToAdd = true;
+            for (AttributeMap &i : completeDevicesAttrMap)
             {
-                if (i["DeviceId"] == deviceId)
+                if (i["DeviceId"] == dIAI.first)
                 {
-                    addToAttrMap = false;
+                    needToAdd = false;
                     break;
                 }
             }
 
-            if (addToAttrMap)
+            if (needToAdd)
             {
-                AttributeMap& devAttrMap = getDeviceAttributeMap(deviceDevs, devInfo, scsiPortToDeviceIdMap);
-                completeDevicesAttrMap.push_back(devAttrMap);
+                devAttrMapsToAdd.push_back(std::async(getDeviceAttributeMap, deviceDevs, dIAI.second, ref(scsiPortToDeviceIdMap)));
             }
+        }
+
+        for (std::future<AttributeMap> &futureAttrMap : devAttrMapsToAdd)
+        {
+            completeDevicesAttrMap.push_back(futureAttrMap.get());
         }
     }
 
