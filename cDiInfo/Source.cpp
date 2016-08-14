@@ -11,7 +11,7 @@
 void printUsage(int argc, char** argv)
 {
     std::cout << "cDiInfo: A program that gets information using the SetupDi... WinApi calls." << std::endl;
-    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | -getAll] [<key> <value>]" << std::endl;
+    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | -getAll | -getAllJust | -getAllWithout] [<key> <value>]" << std::endl;
     std::cout << "Key and value used if applying to a specific device" << std::endl;
     std::cout << "You gave " << argc << " arg(s)." << std::endl;
 }
@@ -20,7 +20,6 @@ void printUsage(int argc, char** argv)
 int main(int argc, char** argv)
 {
     int returnCode = EXIT_SUCCESS;
-
     if (argc == 2 && std::string(argv[1]) == "-a")
     {
         printAllInfo();
@@ -28,7 +27,7 @@ int main(int argc, char** argv)
     else if (argc == 2 && std::string(argv[1]) == "-keys")
     {
         std::vector<std::string> &keys = getSampleAttributeKeys();
-        printVectorOfStrings(keys, "Possible Attribute Map Keys:");
+        printVectorOfStrings(keys, "Possible Attribute Map Keys: (Remember, not all devices have all of these)");
     }
     else if (argc == 2 && std::string(argv[1]) == "-enumerators")
     {
@@ -70,6 +69,19 @@ int main(int argc, char** argv)
     else if (argc == 4 && std::string(argv[1]) == "-getAll")
     {
         std::vector<AttributeMap> &attributeMaps = getAttributeMapsWith(argv[2], argv[3]);
+        for (auto i : attributeMaps)
+        {
+            printAttributeMap(i);
+        }
+    }
+    else if (argc == 4 && std::string(argv[1]) == "-getAllJust")
+    {
+        std::vector<std::string> &matchingAttributes = getAttributesWith(argv[2], argv[3]);
+        printVectorOfStrings(matchingAttributes, "All attributes of " + std::string(argv[2]) + " that match: " + std::string(argv[3]));
+    }
+    else if (argc == 4 && std::string(argv[1]) == "-getAllWithout")
+    {
+        std::vector<AttributeMap> &attributeMaps = getAttributeMapsWithout(argv[2], argv[3]);
         for (auto i : attributeMaps)
         {
             printAttributeMap(i);

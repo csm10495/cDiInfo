@@ -7,9 +7,27 @@
 // Local includes
 #include "Strings.h"
 
+std::string trim(std::string &s)
+{
+    return lTrim(rTrim(s));
+}
+
+std::string& lTrim(std::string& s)
+{
+    s.erase(0, s.find_first_not_of(TRIM_CHARS));
+
+    while (s.size() > 0 && s.front() == '\0')
+    {
+        s.erase(0);
+    }
+
+    return s;
+
+}
+
 std::string &rTrim(std::string & s)
 {
-    s.erase(s.find_last_not_of(" \n\r\t") + 1);
+    s.erase(s.find_last_not_of(TRIM_CHARS) + 1);
 
     while (s.size() > 0 && s.back() == '\0')
     {
@@ -22,6 +40,7 @@ std::string &rTrim(std::string & s)
 std::string &toUpper(std::string &s)
 {
     std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+
     return s;
 }
 
@@ -858,7 +877,7 @@ std::string propertyKeyToString(DEVPROPKEY propertyKey)
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_InstanceId, propertyKey))
     {
-        return "Device_InstanceId";
+        return "Device_DeviceId";
     }
     if (IsEqualDevPropKey(DEVPKEY_Device_DevNodeStatus, propertyKey))
     {
@@ -1996,9 +2015,19 @@ std::string resourceToString(BYTE* buffer, ULONG bufferSize, RESOURCEID resource
 
 std::string numToHexString(UINT64 number, int width)
 {
-    std::stringstream sstream;
-    sstream << "0x" << std::setfill('0') << std::setw(width) << std::hex << std::uppercase << number;
-    return sstream.str();
+    // Use the C++ method on larger strings, otherwise the C method is much faster (~3x)
+    if (number > 0xFFFF)
+    {
+        std::stringstream sstream;
+        sstream << "0x" << std::setfill('0') << std::setw(width) << std::hex << std::uppercase << number;
+        return sstream.str();
+    }
+    else
+    {
+        char charArray[7] = { "\0" };
+        snprintf(charArray, 7, "0x%X", (unsigned int) number);
+        return std::string(charArray);
+    }
 }
 
 std::string powerStateToString(ULONG powerState)
@@ -2061,18 +2090,6 @@ std::string delimitedStringToNewlineString(std::string& retStr)
     retStr = std::regex_replace(retStr, std::regex("\n\n"), "\n");
 
     return rTrim(retStr);
-}
-
-std::string toBoolString(UINT64 number)
-{
-    if (number)
-    {
-        return "True";
-    }
-    else
-    {
-        return "False";
-    }
 }
 
 std::string storageBusTypeToString(STORAGE_BUS_TYPE busType)
@@ -2147,4 +2164,9 @@ std::string storageBusTypeToString(STORAGE_BUS_TYPE busType)
     }
 
     return "Unknown";
+}
+
+bool guidToString(std::string guidAsString, LPGUID guid)
+{
+    return (CLSIDFromString((LPCOLESTR)stringToWString(guidAsString).c_str(), guid) == NOERROR);
 }

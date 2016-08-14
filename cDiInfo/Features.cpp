@@ -7,6 +7,34 @@
 // Local includes
 #include "Features.h"
 
+std::vector<std::string> sampleAttributeKeys = {
+    "DeviceId",
+    "DeviceDesc",
+    "FriendlyName",
+    "HardwareId",
+    "Driver",
+    "Manufacturer",
+    "BusNumber",
+    "ChildrenDeviceIds",
+    "ParentDeviceId",
+    "SiblingDeviceIds",
+    "DriverDescription",
+    "DriverMfgName",
+    "ScsiAdapterPath",
+    "ScsiPortNumber",
+    "ScsiPathId",
+    "ScsiLun",
+    "ScsiTargetId",
+    "DevicePath",
+    "PhysicalDrivePath",
+    "MaximumTransferLength",
+    "DeviceHotplug",
+    "DiskLength",
+    "VendorId",
+    "ProductRevision",
+    "SerialNumber",
+};
+
 STATUS disableDevice(DEVINST devInst)
 {
     if (devInst == NULL)
@@ -58,31 +86,18 @@ void printAllInfo()
 
 void printVectorOfStrings(std::vector<std::string>& vec, std::string title)
 {
-    std::cout << title << std::endl;
-    for (auto &i : vec)
+    printf("%s\n", title.c_str());
+    auto regex = std::regex("\n");
+    for (auto i : vec)
     {
-        std::cout << "  " << i << std::endl;
+        i = std::regex_replace(i, regex, "\n  ");
+        printf("  %s\n", rTrim(i).c_str());
     }
 }
 
 std::vector<std::string> getSampleAttributeKeys()
 {
-    std::vector<std::string> retKeys;
-
-    HDEVINFO devs = { 0 };
-    SP_DEVINFO_DATA devInfo = { 0 };
-
-    AttributeMap sampleAttributeMap = getDeviceAttributeMap(devs, devInfo, std::map<int, std::string>());
-
-    for (auto &i : sampleAttributeMap)
-    {
-        if (i.first != DEVINFO_DATA_STRING)
-        {
-            retKeys.push_back(i.first);
-        }
-    }
-
-    return retKeys;
+    return sampleAttributeKeys;
 }
 
 std::vector<std::string> getEnumerators()
@@ -118,4 +133,61 @@ std::vector<std::string> getClasses()
     }
 
     return classes;
+}
+
+std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value)
+{
+    std::vector<AttributeMap> matchingAttributeMaps;
+
+    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
+    for (auto &deviceAttrMap : devicesAttributeMap)
+    {
+        auto itr = deviceAttrMap.find(key);
+        if (itr != deviceAttrMap.end())
+        {
+            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            {
+                matchingAttributeMaps.push_back(deviceAttrMap);
+            }
+        }
+    }
+    return matchingAttributeMaps;
+}
+
+std::vector<std::string> getAttributesWith(std::string key, std::string value)
+{
+    std::vector<AttributeMap> &attributeMapsWith = getAttributeMapsWith(key, value);
+    
+    std::vector<std::string> retVec;
+
+    for (auto &i : attributeMapsWith)
+    {
+        // The key/value has to be there at this point
+        retVec.push_back(i[key]);
+    }
+
+    return retVec;
+}
+
+std::vector<AttributeMap> getAttributeMapsWithout(std::string key, std::string value)
+{
+    std::vector<AttributeMap> matchingAttributeMaps;
+
+    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
+    for (auto &deviceAttrMap : devicesAttributeMap)
+    {
+        auto itr = deviceAttrMap.find(key);
+        if (itr != deviceAttrMap.end())
+        {
+            if (!SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            {
+                matchingAttributeMaps.push_back(deviceAttrMap);
+            }
+        }
+        else
+        {
+            matchingAttributeMaps.push_back(deviceAttrMap);
+        }
+    }
+    return matchingAttributeMaps;
 }

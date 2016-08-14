@@ -28,6 +28,17 @@
 // Used for buffer with 0 length
 #define ZERO_LENGTH_BUFFER "<Zero Length buffer>"
 
+// Characters to trim 
+#define TRIM_CHARS " \n\r\t"
+
+// Macro to get a bool string
+#define toBoolString(num) ((num) ? "True" : "False")
+
+// Left and right trims of the given string (by reference) and returns it
+std::string trim(std::string &s);
+
+// Left trims the given string (by reference) and returns it
+std::string& lTrim(std::string& s);
 
 // Right trims the given string (by reference) and returns it
 std::string &rTrim(std::string &s);
@@ -86,8 +97,8 @@ std::string systemPowerStateToString(ULONG tmp);
 // Converts a string delimited by \0 to newlines
 std::string delimitedStringToNewlineString(std::string& retStr);
 
-// Gets either True or False
-std::string toBoolString(UINT64 number);
-
 // Converts storage bus type to string
 std::string storageBusTypeToString(STORAGE_BUS_TYPE busType);
+
+// Converts a string to a GUID, returns True if successful
+bool guidToString(std::string guidAsString, LPGUID guid);

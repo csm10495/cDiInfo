@@ -7,6 +7,32 @@
 // Local includes
 #include "Core.h"
 
+// from various WinApi files where importing would get an error (for some reason)
+DEFINE_GUID(GUID_DEVINTERFACE_I2C, 0x2564AA4F, 0xDDDB, 0x4495, 0xB4, 0x97, 0x6A, 0xD4, 0xA8, 0x41, 0x63, 0xD7);
+DEFINE_GUID(GUID_DEVINTERFACE_OPM_2_JTP, 0xE929EEA4, 0xB9F1, 0x407B, 0xAA, 0xB9, 0xAB, 0x08, 0xBB, 0x44, 0xFB, 0xF4);
+DEFINE_GUID(GUID_DEVINTERFACE_OPM_2, 0x7F098726, 0x2EBB, 0x4FF3, 0xA2, 0x7F, 0x10, 0x46, 0xB9, 0x5D, 0xC5, 0x17);
+DEFINE_GUID(GUID_DEVINTERFACE_BRIGHTNESS, 0xFDE5BBA4, 0xB3F9, 0x46FB, 0xBD, 0xAA, 0x07, 0x28, 0xCE, 0x31, 0x00, 0xB4);
+DEFINE_GUID(GUID_DEVINTERFACE_BRIGHTNESS_2, 0x148A3C98, 0x0ECD, 0x465A, 0xB6, 0x34, 0xB0, 0x5F, 0x19, 0x5F, 0x77, 0x39);
+DEFINE_GUID(GUID_DEVINTERFACE_MIRACAST_DISPLAY, 0xaf03f190, 0x22af, 0x48cb, 0x94, 0xbb, 0xb7, 0x8e, 0x76, 0xa2, 0x51, 0x7);
+DEFINE_GUID(BUS1394_CLASS_GUID, 0x6BDD1FC1, 0x810F, 0x11d0, 0xBE, 0xC7, 0x08, 0x00, 0x2B, 0xE2, 0x09, 0x2F);
+DEFINE_GUID(GUID_61883_CLASS, 0x7ebefbc0, 0x3200, 0x11d2, 0xb4, 0xc2, 0x0, 0xa0, 0xc9, 0x69, 0x7d, 0x7);
+DEFINE_GUID(GUID_DEVICE_BATTERY, 0x72631e54L, 0x78A4, 0x11d0, 0xbc, 0xf7, 0x00, 0xaa, 0x00, 0xb7, 0xb3, 0x2a);
+DEFINE_GUID(GUID_DEVICE_APPLICATIONLAUNCH_BUTTON, 0x629758eel, 0x986e, 0x4d9e, 0x8e, 0x47, 0xde, 0x27, 0xf8, 0xab, 0x05, 0x4d);
+DEFINE_GUID(GUID_DEVICE_SYS_BUTTON, 0x4AFA3D53L, 0x74A7, 0x11d0, 0xbe, 0x5e, 0x00, 0xA0, 0xC9, 0x06, 0x28, 0x57);
+DEFINE_GUID(GUID_DEVICE_LID, 0x4AFA3D52L, 0x74A7, 0x11d0, 0xbe, 0x5e, 0x00, 0xA0, 0xC9, 0x06, 0x28, 0x57);
+DEFINE_GUID(GUID_DEVICE_THERMAL_ZONE, 0x4AFA3D51L, 0x74A7, 0x11d0, 0xbe, 0x5e, 0x00, 0xA0, 0xC9, 0x06, 0x28, 0x57);
+DEFINE_GUID(GUID_DEVICE_FAN, 0x05ecd13dL, 0x81da, 0x4a2a, 0x8a, 0x4c, 0x52, 0x4f, 0x23, 0xdd, 0x4d, 0xc9);
+DEFINE_GUID(GUID_DEVICE_PROCESSOR, 0x97fadb10L, 0x4e33, 0x40ae, 0x35, 0x9c, 0x8b, 0xef, 0x02, 0x9d, 0xbd, 0xd0);
+DEFINE_GUID(GUID_DEVICE_MEMORY, 0x3fd0f03dL, 0x92e0, 0x45fb, 0xb7, 0x5c, 0x5e, 0xd8, 0xff, 0xb0, 0x10, 0x21);
+DEFINE_GUID(GUID_DEVICE_ACPI_TIME, 0x97f99bf6L, 0x4497, 0x4f18, 0xbb, 0x22, 0x4b, 0x9f, 0xb2, 0xfb, 0xef, 0x9c);
+DEFINE_GUID(GUID_DEVICE_MESSAGE_INDICATOR, 0XCD48A365L, 0xfa94, 0x4ce2, 0xa2, 0x32, 0xa1, 0xb7, 0x64, 0xe5, 0xd8, 0xb4);
+DEFINE_GUID(GUID_DEVINTERFACE_THERMAL_COOLING, 0xdbe4373d, 0x3c81, 0x40cb, 0xac, 0xe4, 0xe0, 0xe5, 0xd0, 0x5f, 0xc, 0x9f);
+DEFINE_GUID(GUID_DEVINTERFACE_OPM, 0xBF4672DE, 0x6B4E, 0x4BE4, 0xA3, 0x25, 0x68, 0xA9, 0x1E, 0xA4, 0x9C, 0x09);
+DEFINE_GUID(GUID_DEVINTERFACE_SIDESHOW, 0x152e5811, 0xfeb9, 0x4b00, 0x90, 0xf4, 0xd3, 0x29, 0x47, 0xae, 0x16, 0x81);
+DEFINE_GUID(GUID_AEPSERVICE_WIFIDIRECT_DEVICE, 0xcc29827c, 0x9caf, 0x4928, 0x99, 0xa9, 0x18, 0xf7, 0xc2, 0x38, 0x13, 0x89);
+DEFINE_GUID(GUID_DEVINTERFACE_WIFIDIRECT_DEVICE, 0x439b20af, 0x8955, 0x405b, 0x99, 0xf0, 0xa6, 0x2a, 0xf0, 0xc6, 0x8d, 0x43);
+DEFINE_GUID(GUID_DEVINTERFACE_SMARTCARD_READER, 0x50DD5230, 0xBA8A, 0x11D1, 0xBF, 0x5D, 0x00, 0x00, 0xF8, 0x05, 0xF5, 0x30);
+
 // A list of all DEVINTERFACE GUIDs
 std::vector<GUID> ALL_GUIDS = {
     GUID_DEVINTERFACE_DISK,
@@ -24,6 +50,104 @@ std::vector<GUID> ALL_GUIDS = {
     GUID_DEVINTERFACE_HIDDEN_VOLUME,
     GUID_DEVINTERFACE_COMPORT,
     GUID_DEVINTERFACE_SERENUM_BUS_ENUMERATOR,
+    GUID_DEVINTERFACE_USB_DEVICE,
+    GUID_DEVINTERFACE_USB_HOST_CONTROLLER,
+    GUID_DEVINTERFACE_USB_HUB,
+    GUID_DEVINTERFACE_WPD,
+    GUID_DEVINTERFACE_WPD_PRIVATE,
+    GUID_DEVINTERFACE_NET,
+    GUID_DEVINTERFACE_HID,
+    GUID_DEVINTERFACE_KEYBOARD,
+    GUID_DEVINTERFACE_MOUSE,
+    GUID_DEVINTERFACE_MODEM,
+    GUID_DEVINTERFACE_PARALLEL,
+    GUID_DEVINTERFACE_SENSOR,
+    GUID_DEVINTERFACE_VIDEO_OUTPUT_ARRIVAL,
+    GUID_DEVINTERFACE_MONITOR,
+    GUID_DEVINTERFACE_IMAGE,
+    GUID_DEVINTERFACE_I2C,
+    GUID_DEVINTERFACE_DISPLAY_ADAPTER,
+    GUID_DEVINTERFACE_BRIGHTNESS,
+    GUID_DEVINTERFACE_BRIGHTNESS_2,
+    GUID_DEVINTERFACE_OPM_2_JTP,
+    GUID_DEVINTERFACE_OPM_2,
+    GUID_DEVINTERFACE_OPM,
+    GUID_DEVINTERFACE_MIRACAST_DISPLAY,
+    GUID_BTHPORT_DEVICE_INTERFACE,
+    BUS1394_CLASS_GUID,
+    GUID_61883_CLASS,
+    GUID_DEVICE_APPLICATIONLAUNCH_BUTTON,
+    GUID_DEVICE_BATTERY,
+    GUID_DEVICE_SYS_BUTTON,
+    GUID_DEVICE_LID,
+    GUID_DEVICE_THERMAL_ZONE,
+    GUID_DEVICE_FAN,
+    GUID_DEVICE_PROCESSOR,
+    GUID_DEVICE_MEMORY,
+    GUID_DEVICE_ACPI_TIME,
+    GUID_DEVICE_MESSAGE_INDICATOR,
+    GUID_DEVINTERFACE_THERMAL_COOLING,
+    GUID_DISPLAY_DEVICE_ARRIVAL,
+    GUID_DEVINTERFACE_PARCLASS,
+    GUID_DEVINTERFACE_SIDESHOW,
+    GUID_AEPSERVICE_WIFIDIRECT_DEVICE,
+    GUID_DEVINTERFACE_WIFIDIRECT_DEVICE,
+    GUID_DEVINTERFACE_SMARTCARD_READER,
+    GUID_AVC_CLASS,
+    GUID_VIRTUAL_AVC_CLASS,
+
+    // Deprecated KSCAT_
+    KSCATEGORY_AUDIO,
+    KSCATEGORY_ACOUSTIC_ECHO_CANCEL,
+    KSCATEGORY_IP_SINK,
+    KSCATEGORY_BDA_NETWORK_EPG,
+    KSCATEGORY_BDA_NETWORK_PROVIDER,
+    KSCATEGORY_BDA_NETWORK_TUNER,
+    KSCATEGORY_BDA_RECEIVER_COMPONENT,
+    KSCATEGORY_BDA_TRANSPORT_INFORMATION,
+    KSCATEGORY_BRIDGE,
+    KSCATEGORY_CAPTURE,
+    KSCATEGORY_CLOCK,
+    KSCATEGORY_COMMUNICATIONSTRANSFORM,
+    KSCATEGORY_CROSSBAR,
+    KSCATEGORY_DATACOMPRESSOR,
+    KSCATEGORY_DATADECOMPRESSOR,
+    KSCATEGORY_DATATRANSFORM,
+    KSCATEGORY_DRM_DESCRAMBLE,
+    KSCATEGORY_ENCODER,
+    KSCATEGORY_ESCALANTE_PLATFORM_DRIVER,
+    KSCATEGORY_FILESYSTEM,
+    KSCATEGORY_INTERFACETRANSFORM,
+    KSCATEGORY_MEDIUMTRANSFORM,
+    KSCATEGORY_MICROPHONE_ARRAY_PROCESSOR,
+    KSCATEGORY_MIXER,
+    KSCATEGORY_MULTIPLEXER,
+    KSCATEGORY_NETWORK,
+    KSCATEGORY_PROXY,
+    KSCATEGORY_QUALITY,
+    KSCATEGORY_REALTIME,
+    KSCATEGORY_RENDER,
+    KSCATEGORY_SPLITTER,
+    KSCATEGORY_SYNTHESIZER,
+    KSCATEGORY_TEXT,
+    KSCATEGORY_TOPOLOGY,
+    KSCATEGORY_TVAUDIO,
+    KSCATEGORY_TVTUNER,
+    KSCATEGORY_VBICODEC,
+    KSCATEGORY_VIDEO,
+    KSCATEGORY_VIRTUAL,
+    KSCATEGORY_VPMUX,
+
+    KSMFT_CATEGORY_AUDIO_DECODER,
+    KSMFT_CATEGORY_AUDIO_EFFECT,
+    KSMFT_CATEGORY_AUDIO_ENCODER,
+    KSMFT_CATEGORY_DEMULTIPLEXER,
+    KSMFT_CATEGORY_MULTIPLEXER,
+    KSMFT_CATEGORY_OTHER,
+    KSMFT_CATEGORY_VIDEO_DECODER,
+    KSMFT_CATEGORY_VIDEO_EFFECT,
+    KSMFT_CATEGORY_VIDEO_ENCODER,
+    KSMFT_CATEGORY_VIDEO_PROCESSOR,
 };
 
 HDEVINFO getAllClassesHDevInfo()
@@ -93,7 +217,7 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
     return std::string(UNAVAILABLE_ATTRIBUTE);
 }
 
-bool getDriverInfoData(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, PSP_DRVINFO_DATA driverInfoData)
+bool getDriverInfoData(HDEVINFO devs, SP_DEVINFO_DATA devInfo, PSP_DRVINFO_DATA driverInfoData)
 {
     SP_DEVINSTALL_PARAMS deviceInstallParams = { 0 };
     deviceInstallParams.cbSize = sizeof(SP_DEVINSTALL_PARAMS);
@@ -311,8 +435,8 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
         std::string DriverMfgName = driverInfoData.MfgName;
         addToMap(devAttrMap, DriverMfgName);
 
-        std::string DriverProviderName = driverInfoData.ProviderName;
-        addToMap(devAttrMap, DriverProviderName);
+        std::string DriverProvider = driverInfoData.ProviderName;
+        addToMap(devAttrMap, DriverProvider);
 
         std::string DriverType = std::to_string(driverInfoData.DriverType);
         addToMap(devAttrMap, DriverType);
@@ -345,7 +469,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO &devs, SP_DEVINFO_DATA &devInfo, std
     return devAttrMap;
 }
 
-void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST &devInst)
+void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST devInst)
 {
     // First get number of properties
     ULONG propertyKeyCount = 0;
@@ -413,7 +537,7 @@ end:
     delete[] propertyKeyArray;
 }
 
-void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST &devInst)
+void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devInst)
 {
     LOG_CONF  firstLogConf;
     CONFIGRET cmRet = CM_Get_First_Log_Conf(&firstLogConf, devInst, ALLOC_LOG_CONF);
@@ -564,8 +688,27 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
     {
         for (auto guid : ALL_GUIDS)
         {
-            std::vector<AttributeMap> devAttrMap = getInterfaceAttributeMap(guid);
-            interfaces.insert(std::end(interfaces), std::begin(devAttrMap), std::end(devAttrMap));
+            std::vector<AttributeMap>& devAttrMap = getInterfaceAttributeMap(guid);
+
+            for (AttributeMap &thisAttrMap : devAttrMap)
+            {
+                bool merged = false;
+                for (AttributeMap &interfaceMap : interfaces)
+                {
+                    if (thisAttrMap["DeviceId"] == interfaceMap["DeviceId"])
+                    {
+                        interfaceMap = mergeAttributeMaps(interfaceMap, thisAttrMap);
+                        merged = true;
+                        break;
+                    }
+                }
+
+                if (!merged)
+                {
+                    interfaces.push_back(thisAttrMap);
+                }
+            }
+
         }
 
         return interfaces;
@@ -657,7 +800,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
             {
                 STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
                 DWORD bytesReturned;
-                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL))
+                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
                 {
                     std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
                     addToMap(devAttrMap, PhysicalDrivePath);
@@ -720,11 +863,11 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                         if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, &ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL))
                         {
                             std::string MaximumTransferLength = std::to_string(ioScsiCapabilities.MaximumTransferLength);
-                            addToMap(devAttrMap, MaximumTransferLength); 
-                            
+                            addToMap(devAttrMap, MaximumTransferLength);
+
                             std::string MaximumPhysicalPages = std::to_string(ioScsiCapabilities.MaximumPhysicalPages);
-                            addToMap(devAttrMap, MaximumPhysicalPages); 
-                            
+                            addToMap(devAttrMap, MaximumPhysicalPages);
+
                             std::string SupportedAsynchronousEvents = toBoolString(ioScsiCapabilities.SupportedAsynchronousEvents);
                             addToMap(devAttrMap, SupportedAsynchronousEvents);
 
@@ -745,7 +888,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                 // Get hotplug info
                 STORAGE_HOTPLUG_INFO storageHotplugInfo = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL))
+                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL) && bytesReturned != 0)
                 {
                     std::string MediaRemovable = toBoolString(storageHotplugInfo.MediaRemovable);
                     addToMap(devAttrMap, MediaRemovable);
@@ -759,7 +902,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                 // Get media serial number
                 MEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(MEDIA_SERIAL_NUMBER_DATA), &bytesReturned, NULL))
+                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(MEDIA_SERIAL_NUMBER_DATA), &bytesReturned, NULL) && bytesReturned != 0)
                 {
                     std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData.SerialNumberData, mediaSerialNumberData.SerialNumberLength);
                     addToMap(devAttrMap, MediaSerialNumber);
@@ -767,7 +910,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                 // Get media serial number
                 STORAGE_READ_CAPACITY storageReadCapacity = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL))
+                if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL) && bytesReturned != 0)
                 {
                     std::string BlockLength = std::to_string(storageReadCapacity.BlockLength);
                     addToMap(devAttrMap, BlockLength);
@@ -786,10 +929,10 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                 memset(&storagePropertyQuery, 0, sizeof(STORAGE_PROPERTY_QUERY));
                 storagePropertyQuery.PropertyId = StorageDeviceUniqueIdProperty;
                 storagePropertyQuery.QueryType = PropertyStandardQuery;
-                if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL))
+                if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL) && bytesReturned != 0)
                 {
                     PSTORAGE_DEVICE_ID_DESCRIPTOR pStorageDeviceIdDescriptor = (PSTORAGE_DEVICE_ID_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceIdOffset);
-                    
+
                     PSTORAGE_DEVICE_DESCRIPTOR pStorageDeviceDescriptor = (PSTORAGE_DEVICE_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceOffset);
 
                     std::string CommandQueueing = toBoolString(pStorageDeviceDescriptor->CommandQueueing);
@@ -843,7 +986,9 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                 CloseHandle(handle);
 
             }
+
             interfaces.push_back(devAttrMap);
+
         }
 
         delete[] buffer;
@@ -883,6 +1028,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
 
     {
         completeDevicesAttrMap = getInterfaceAttributeMap(GUID_NULL);
+
         for (int devIndex = 0; SetupDiEnumDeviceInfo(deviceDevs, devIndex, &devInfo); devIndex++)
         {
             std::string deviceId = getDeviceId(devInfo.DevInst);
@@ -918,7 +1064,8 @@ exit:
 
 void printAttributeMap(AttributeMap &attrMap)
 {
-    for (auto &i : attrMap)
+    std::regex newlineRegex = std::regex("\n");
+    for (auto i : attrMap)
     {
         // Hide 'private' attributes
         if (!startsWith("__", i.first, true))
@@ -931,13 +1078,12 @@ void printAttributeMap(AttributeMap &attrMap)
                 spaces += " ";
             }
 
-            value = std::regex_replace(value, std::regex("\n"), "\n" + spaces);
-            value = std::regex_replace(value, std::regex("\n\n"), "\n");
+            value = std::regex_replace(value, newlineRegex, "\n" + spaces);
 
             printf("%-25s: %s\n", i.first.c_str(), value.c_str());
         }
     }
-    std::cout << "*******************************************************" << std::endl;
+    puts("*******************************************************");
 }
 
 AttributeMap getAttributeMapWith(std::string key, std::string value)
@@ -955,25 +1101,6 @@ AttributeMap getAttributeMapWith(std::string key, std::string value)
         }
     }
     return AttributeMap();
-}
-
-std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value)
-{
-    std::vector<AttributeMap> matchingAttributeMaps;
-
-    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
-    for (auto &deviceAttrMap : devicesAttributeMap)
-    {
-        auto itr = deviceAttrMap.find(key);
-        if (itr != deviceAttrMap.end())
-        {
-            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
-            {
-                matchingAttributeMaps.push_back(deviceAttrMap);
-            }
-        }
-    }
-    return matchingAttributeMaps;
 }
 
 DEVINST getDevInstWith(std::string key, std::string value)
@@ -1026,4 +1153,32 @@ std::map<int, std::string> getScsiPortToDeviceIdMap()
     }
 
     return scsiPortToDeviceIdMap;
+}
+
+AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap)
+{
+    for (auto &i : oldAMap)
+    {
+        // It's rare but sometimes the newAMap won't have something in the oldAMap (or vice-versa)
+        if (newAMap.find(i.first) != newAMap.end())
+        {
+            // Don't merge private vars... take 1 of them
+            if (i.second != newAMap[i.first] & !startsWith("__", i.first, true))
+            {
+                    // Merge by adding attributes that are different
+                    i.second += "\n" + newAMap[i.first];
+            }
+        }
+    }
+
+    // If something is just in the newAMap, we need to bring it over to the oldAMap
+    for (auto &i : newAMap)
+    {
+        if (oldAMap.find(i.first) == oldAMap.end())
+        {
+            oldAMap[i.first] = i.second;
+        }
+    }
+
+    return oldAMap;
 }
