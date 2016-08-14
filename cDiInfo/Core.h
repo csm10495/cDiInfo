@@ -13,6 +13,7 @@
 
 // STL includes
 #include <algorithm>
+#include <future>
 #include <map>
 #include <string>
 #include <vector>

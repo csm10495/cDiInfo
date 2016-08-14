@@ -686,18 +686,25 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
     if (classGuid == GUID_NULL)
     {
+        std::vector<std::future<std::vector<AttributeMap>>> vectorFutureVectorOfAttributeMaps;
+
         for (auto guid : ALL_GUIDS)
         {
-            std::vector<AttributeMap>& devAttrMap = getInterfaceAttributeMap(guid);
+            // multithreading
+            vectorFutureVectorOfAttributeMaps.push_back(std::async(getInterfaceAttributeMap, guid));
+        }
 
-            for (AttributeMap &thisAttrMap : devAttrMap)
+        // join
+        for (std::future<std::vector<AttributeMap>> &futureVectorOfAttributeMaps : vectorFutureVectorOfAttributeMaps)
+        {
+            for (AttributeMap &attributeMap : futureVectorOfAttributeMaps.get())
             {
                 bool merged = false;
                 for (AttributeMap &interfaceMap : interfaces)
                 {
-                    if (thisAttrMap["DeviceId"] == interfaceMap["DeviceId"])
+                    if (attributeMap["DeviceId"] == interfaceMap["DeviceId"])
                     {
-                        interfaceMap = mergeAttributeMaps(interfaceMap, thisAttrMap);
+                        attributeMap = mergeAttributeMaps(interfaceMap, attributeMap);
                         merged = true;
                         break;
                     }
@@ -705,10 +712,9 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                 if (!merged)
                 {
-                    interfaces.push_back(thisAttrMap);
+                    interfaces.push_back(attributeMap);
                 }
             }
-
         }
 
         return interfaces;
@@ -1165,8 +1171,8 @@ AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap)
             // Don't merge private vars... take 1 of them
             if (i.second != newAMap[i.first] & !startsWith("__", i.first, true))
             {
-                    // Merge by adding attributes that are different
-                    i.second += "\n" + newAMap[i.first];
+                // Merge by adding attributes that are different
+                i.second += "\n" + newAMap[i.first];
             }
         }
     }
