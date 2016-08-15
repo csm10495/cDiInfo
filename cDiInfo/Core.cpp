@@ -1016,8 +1016,25 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     std::string PredictFailure = toBoolString(storagePredictFailure.PredictFailure);
                     addToMap(devAttrMap, PredictFailure);
 
-                    // Todo: Actually decode this as it seems to be SMART data
-                    std::string SMARTData = byteArrayToString((BYTE*)storagePredictFailure.VendorSpecific, 512);
+                    // Get SMART Thresholds
+                    memset(&b, 0, sizeof(b));
+                    PSENDCMDINPARAMS smartSendCmdParams = (PSENDCMDINPARAMS)b;
+                    smartSendCmdParams->cBufferSize = sizeof(b);
+                    IDEREGS ideRegs = { 0 };
+                    ideRegs.bFeaturesReg = READ_THRESHOLDS;
+                    ideRegs.bCylLowReg   = SMART_CYL_LOW; 
+                    ideRegs.bCylHighReg  = SMART_CYL_HI; 
+                    ideRegs.bCommandReg  = SMART_CMD;
+                    smartSendCmdParams->irDriveRegs = ideRegs;
+                    BYTE* smartThresholds = NULL;
+
+                    if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 512)
+                    {
+                        // This math comes from the SMART Thresholds being in the last 512 bytes. Don't care about the rest.
+                        smartThresholds = b + (bytesReturned - 512);
+                    }
+
+                    std::string SMARTData = smartToString((BYTE*)storagePredictFailure.VendorSpecific, 512, smartThresholds);
                     addToMap(devAttrMap, SMARTData);
                 }
 

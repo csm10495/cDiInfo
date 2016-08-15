@@ -2200,3 +2200,44 @@ std::string usbConnectionStatusToString(USB_CONNECTION_STATUS tmp)
     }
     return "No Enum Value Matches, Unknown";
 }
+
+std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThresholds)
+{
+    if (smartLength <= 2)
+    {
+        return "Invalid SMART Data";
+    }
+
+    bool haveThresholds = (smartThresholds != NULL);
+
+    UINT16 smartIdx = 2; // skip the VU smart version number (2 bytes)
+    UINT16 threshIdx = 2;
+    std::string retStr = "ID    Current   Worst     Raw Value       Threshold\n";
+    char buffer[128] = { '\0' };
+    while (smartIdx < smartLength && threshIdx < 512)
+    {
+        PSMART_ATTRIBUTE smartAttribute = (PSMART_ATTRIBUTE)(smartBytes + smartIdx);
+        if (smartAttribute->Id != 0)
+        {
+            std::string threshold = "???";
+
+            if (haveThresholds)
+            {
+                PSMART_THRESHOLD smartThreshold = (PSMART_THRESHOLD)(smartThresholds + threshIdx);
+                threshold = std::to_string(smartThreshold->ThresholdValue);
+            }
+
+            snprintf(buffer, sizeof(buffer), "%02X    %03d       %03lld       0x%010I64X   %3s\n\0", smartAttribute->Id, smartAttribute->CurrentValue, smartAttribute->WorstValue, smartAttribute->RawValue, threshold.c_str());
+            retStr += buffer;
+        }
+        else
+        {
+            // first invalid means we are out of SMART data
+            break;
+        }
+        smartIdx += sizeof(SMART_ATTRIBUTE);
+        threshIdx += sizeof(SMART_THRESHOLD);
+    }
+
+    return retStr;
+}

@@ -23,6 +23,25 @@
 #include <usbioctl.h>
 #undef INITGUID
 
+// Structures for SMART parsing
+#pragma pack(push,1)
+typedef	struct _SMART_ATTRIBUTE
+{
+    BYTE  Id;
+    WORD  StatusFlags;
+    BYTE  CurrentValue;
+    UINT64 WorstValue : 8;
+    UINT64 RawValue : 48;
+    UINT64 Reserved : 8;
+} SMART_ATTRIBUTE, *PSMART_ATTRIBUTE;
+
+typedef	struct _SMART_THRESHOLD
+{
+    BYTE Id;
+    BYTE ThresholdValue;
+    BYTE Reserved[10];
+} SMART_THRESHOLD, *PSMART_THRESHOLD;
+#pragma pack(pop)
 
 // Couldn't parse the resource
 #define UNABLE_TO_PARSE_RESOURCE "<Unable To Parse Resource>"
@@ -107,3 +126,6 @@ bool stringToGuid(std::string guidAsString, LPGUID guid);
 
 // Converts a USB_CONNECTION_STATUS to string
 std::string usbConnectionStatusToString(USB_CONNECTION_STATUS tmp);
+
+// Parses the SMART data into a string
+std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThresholds);
