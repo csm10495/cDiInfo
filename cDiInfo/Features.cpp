@@ -91,7 +91,7 @@ void printVectorOfStrings(std::vector<std::string>& vec, std::string title)
     for (auto i : vec)
     {
         i = std::regex_replace(i, regex, "\n  ");
-        printf("  %s\n", rTrim(i).c_str());
+        printf("  %s\n*******************\n", rTrim(i).c_str());
     }
 }
 

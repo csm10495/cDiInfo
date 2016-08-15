@@ -19,8 +19,10 @@
 #define INITGUID //Define to make the DEVPKEYs work properly
 #include <Devpropdef.h>
 #include <devpkey.h>
-#undef INITGUID
 #include <sddl.h>
+#include <usbioctl.h>
+#undef INITGUID
+
 
 // Couldn't parse the resource
 #define UNABLE_TO_PARSE_RESOURCE "<Unable To Parse Resource>"
@@ -101,4 +103,7 @@ std::string delimitedStringToNewlineString(std::string& retStr);
 std::string storageBusTypeToString(STORAGE_BUS_TYPE busType);
 
 // Converts a string to a GUID, returns True if successful
-bool guidToString(std::string guidAsString, LPGUID guid);
+bool stringToGuid(std::string guidAsString, LPGUID guid);
+
+// Converts a USB_CONNECTION_STATUS to string
+std::string usbConnectionStatusToString(USB_CONNECTION_STATUS tmp);

@@ -2166,7 +2166,37 @@ std::string storageBusTypeToString(STORAGE_BUS_TYPE busType)
     return "Unknown";
 }
 
-bool guidToString(std::string guidAsString, LPGUID guid)
+bool stringToGuid(std::string guidAsString, LPGUID guid)
 {
     return (CLSIDFromString((LPCOLESTR)stringToWString(guidAsString).c_str(), guid) == NOERROR);
+}
+
+std::string usbConnectionStatusToString(USB_CONNECTION_STATUS tmp)
+{
+    switch (tmp)
+    {
+    case(USB_CONNECTION_STATUS::NoDeviceConnected):
+        return "NoDeviceConnected";
+    case(USB_CONNECTION_STATUS::DeviceConnected):
+        return "DeviceConnected";
+    case(USB_CONNECTION_STATUS::DeviceFailedEnumeration):
+        return "DeviceFailedEnumeration";
+    case(USB_CONNECTION_STATUS::DeviceGeneralFailure):
+        return "DeviceGeneralFailure";
+    case(USB_CONNECTION_STATUS::DeviceCausedOvercurrent):
+        return "DeviceCausedOvercurrent";
+    case(USB_CONNECTION_STATUS::DeviceNotEnoughPower):
+        return "DeviceNotEnoughPower";
+    case(USB_CONNECTION_STATUS::DeviceNotEnoughBandwidth):
+        return "DeviceNotEnoughBandwidth";
+    case(USB_CONNECTION_STATUS::DeviceHubNestedTooDeeply):
+        return "DeviceHubNestedTooDeeply";
+    case(USB_CONNECTION_STATUS::DeviceInLegacyHub):
+        return "DeviceInLegacyHub";
+    case(USB_CONNECTION_STATUS::DeviceEnumerating):
+        return "DeviceEnumerating";
+    case(USB_CONNECTION_STATUS::DeviceReset):
+        return "DeviceReset";
+    }
+    return "No Enum Value Matches, Unknown";
 }

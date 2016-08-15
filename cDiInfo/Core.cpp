@@ -32,6 +32,9 @@ DEFINE_GUID(GUID_DEVINTERFACE_SIDESHOW, 0x152e5811, 0xfeb9, 0x4b00, 0x90, 0xf4, 
 DEFINE_GUID(GUID_AEPSERVICE_WIFIDIRECT_DEVICE, 0xcc29827c, 0x9caf, 0x4928, 0x99, 0xa9, 0x18, 0xf7, 0xc2, 0x38, 0x13, 0x89);
 DEFINE_GUID(GUID_DEVINTERFACE_WIFIDIRECT_DEVICE, 0x439b20af, 0x8955, 0x405b, 0x99, 0xf0, 0xa6, 0x2a, 0xf0, 0xc6, 0x8d, 0x43);
 DEFINE_GUID(GUID_DEVINTERFACE_SMARTCARD_READER, 0x50DD5230, 0xBA8A, 0x11D1, 0xBF, 0x5D, 0x00, 0x00, 0xF8, 0x05, 0xF5, 0x30);
+DEFINE_GUID(GUID_DEVINTERFACE_USB_HUB, 0xf18a0e88, 0xc30c, 0x11d0, 0x88, 0x15, 0x00, 0xa0, 0xc9, 0x06, 0xbe, 0xd8);
+DEFINE_GUID(GUID_DEVINTERFACE_USB_DEVICE, 0xA5DCBF10L, 0x6530, 0x11D2, 0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED);
+DEFINE_GUID(GUID_DEVINTERFACE_USB_HOST_CONTROLLER, 0x3abf6f2d, 0x71c4, 0x462a, 0x8a, 0x92, 0x1e, 0x68, 0x61, 0xe6, 0xaf, 0x27);
 
 // A list of all DEVINTERFACE GUIDs
 std::vector<GUID> ALL_GUIDS = {
@@ -804,8 +807,8 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
             if (handle != INVALID_HANDLE_VALUE)
             {
-                STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
                 DWORD bytesReturned;
+                STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
                 if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
                 {
                     std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
@@ -989,8 +992,107 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     addToMap(devAttrMap, StorageDUID);
                 }
 
-                CloseHandle(handle);
+                if (DeviceIoControl(handle, IOCTL_HID_GET_MANUFACTURER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string Manufacturer = wStringToString((wchar_t*)b);
+                    addToMap(devAttrMap, Manufacturer);
+                }
 
+                if (DeviceIoControl(handle, IOCTL_HID_GET_PRODUCT_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string ProductId = wStringToString((wchar_t*)b);
+                    addToMap(devAttrMap, ProductId);
+                }
+
+                if (DeviceIoControl(handle, IOCTL_HID_GET_SERIALNUMBER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string SerialNumber = wStringToString((wchar_t*)b);
+                    addToMap(devAttrMap, SerialNumber);
+                }
+
+                STORAGE_PREDICT_FAILURE storagePredictFailure = { 0 };
+                if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, &storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string PredictFailure = toBoolString(storagePredictFailure.PredictFailure);
+                    addToMap(devAttrMap, PredictFailure);
+
+                    // Todo: Actually decode this as it seems to be SMART data
+                    std::string SMARTData = byteArrayToString((BYTE*)storagePredictFailure.VendorSpecific, 512);
+                    addToMap(devAttrMap, SMARTData);
+                }
+
+                USB_HUB_CAPABILITIES_EX usbHubCapabilities = { 0 };
+                if (DeviceIoControl(handle, IOCTL_USB_GET_HUB_CAPABILITIES_EX, NULL, NULL, &usbHubCapabilities, sizeof(USB_HUB_CAPABILITIES_EX), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string HubIsHighSpeedCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeedCapable);
+                    addToMap(devAttrMap, HubIsHighSpeedCapable);
+
+                    std::string HubIsHighSpeed = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeed);
+                    addToMap(devAttrMap, HubIsHighSpeed);
+
+                    std::string HubIsMultiTransactionCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTtCapable);
+                    addToMap(devAttrMap, HubIsMultiTransactionCapable);
+
+                    std::string HubIsMultiTransaction = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTt);
+                    addToMap(devAttrMap, HubIsMultiTransaction);
+
+                    std::string HubIsRoot = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsRoot);
+                    addToMap(devAttrMap, HubIsRoot);
+
+                    std::string HubIsArmedWakeOnConnect = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsArmedWakeOnConnect);
+                    addToMap(devAttrMap, HubIsArmedWakeOnConnect);
+
+                    std::string HubIsBusPowered = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsBusPowered);
+                    addToMap(devAttrMap, HubIsBusPowered);
+                }
+
+                USB_NODE_INFORMATION usbNodeInfo;
+                memset(&usbNodeInfo, 0, sizeof(USB_NODE_INFORMATION));
+                // MSDN says to pass the USB_NODE_INFORMATION as input as well and set NodeType... I don't think it does anything on input... Also requesting more than 6 because it seems to pass with invalid data at 6.
+                if (DeviceIoControl(handle, IOCTL_USB_GET_NODE_INFORMATION, &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &bytesReturned, NULL) && bytesReturned > 6)
+                {
+                    if (usbNodeInfo.NodeType == UsbMIParent)
+                    {
+                        std::string ParentUSBNodeType = "UsbMiParent";
+                        addToMap(devAttrMap, ParentUSBNodeType);
+
+                        std::string ParentNumberOfInterfaces = std::to_string(usbNodeInfo.u.MiParentInformation.NumberOfInterfaces);
+                        addToMap(devAttrMap, ParentNumberOfInterfaces);
+                    }
+                    else if (usbNodeInfo.NodeType == UsbHub)
+                    {
+                        std::string ParentUSBNodeType = "UsbHub";
+                        addToMap(devAttrMap, ParentUSBNodeType);
+
+                        std::string ParentNumberOfHubPorts = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bNumberOfPorts);
+                        addToMap(devAttrMap, ParentNumberOfHubPorts);
+
+                        // Apparently there is more info on this in the USB spec... possible todo: decode it.
+                        std::string ParentHubCharacteristics = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.wHubCharacteristics);
+                        addToMap(devAttrMap, ParentHubCharacteristics);
+
+                        // Number is in 2-ms intervals
+                        std::string ParentHubTimeToPowerOn = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bPowerOnToPowerGood * 2) + " Milliseconds";
+                        addToMap(devAttrMap, ParentHubTimeToPowerOn);
+
+                        // Number is in milliamperes
+                        std::string ParentHubMaxCurrent = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes";
+                        addToMap(devAttrMap, ParentHubMaxCurrent);
+
+                        std::string ParentIsBusPowered = toBoolString(usbNodeInfo.u.HubInformation.HubIsBusPowered);
+                        addToMap(devAttrMap, ParentIsBusPowered);
+                    }
+                }
+
+                memset(&b, 0, sizeof(b));
+                PUSB_ROOT_HUB_NAME usbRootHubName = (PUSB_ROOT_HUB_NAME)b;
+                if (DeviceIoControl(handle, IOCTL_USB_GET_ROOT_HUB_NAME, NULL, NULL, usbRootHubName, 1024, &bytesReturned, NULL) && bytesReturned > 0 && usbRootHubName->ActualLength > 0)
+                {
+                    std::string RootHubName = wStringToString(std::wstring((wchar_t*)usbRootHubName->RootHubName));
+                    addToMap(devAttrMap, RootHubName);
+                }
+
+                CloseHandle(handle);
             }
 
             interfaces.push_back(devAttrMap);

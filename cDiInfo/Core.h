@@ -47,6 +47,7 @@
 #include <Sensors.h>
 #include <SetupAPI.h>
 #include <storduid.h>
+#include <usbioctl.h>
 #include <Usbiodef.h>
 #include <Wiaintfc.h>
 
