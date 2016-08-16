@@ -84,14 +84,18 @@ void printAllInfo()
     }
 }
 
-void printVectorOfStrings(std::vector<std::string>& vec, std::string title)
+void printVectorOfStrings(std::vector<std::string>& vec, std::string title, bool printStars)
 {
     printf("%s\n", title.c_str());
     auto regex = std::regex("\n");
     for (auto i : vec)
     {
         i = std::regex_replace(i, regex, "\n  ");
-        printf("  %s\n*******************\n", rTrim(i).c_str());
+        printf("%s\n", rTrim(i).c_str());
+        if (printStars)
+        {
+            printf("\n*******************\n");
+        }
     }
 }
 
@@ -125,7 +129,7 @@ std::vector<std::string> getClasses()
     for (ULONG i = 0; ;i++)
     {
         GUID guid;
-        if (CM_Enumerate_Classes(i, &guid,  0) != CR_SUCCESS)
+        if (CM_Enumerate_Classes(i, &guid, 0) != CR_SUCCESS)
         {
             break;
         }
@@ -154,19 +158,49 @@ std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string valu
     return matchingAttributeMaps;
 }
 
-std::vector<std::string> getAttributesWith(std::string key, std::string value)
+std::vector<AttributeMap> getAttributesWith(std::string key, std::string value, std::string alt)
 {
-    std::vector<AttributeMap> &attributeMapsWith = getAttributeMapsWith(key, value);
-    
-    std::vector<std::string> retVec;
+    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
+    std::vector<AttributeMap> retAM;
 
-    for (auto &i : attributeMapsWith)
+    std::vector<std::string> otherAttributeNames = split(alt, ',');
+    // trim each string
+    std::for_each(otherAttributeNames.begin(), otherAttributeNames.end(), trim);
+
+    for (AttributeMap &attributeMap : devicesAttributeMap)
     {
-        // The key/value has to be there at this point
-        retVec.push_back(i[key]);
+        AttributeMap inAM;
+        
+        // make sure this attribute map has the key... if not continue
+        auto itr = attributeMap.find(key);
+        if (itr != attributeMap.end())
+        {
+            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            {
+                inAM[itr->first] = attributeMap[itr->first];
+            }
+        }
+        else
+        {
+            continue;
+        }
+
+        // go through each attribute, if it matches one of the otherAttributeNames, add it to the inAM
+        for (auto attribute : attributeMap)
+        {
+            for (auto attributeName : otherAttributeNames)
+            {
+                if (SymMatchString(attribute.first.c_str(), attributeName.c_str(), FALSE))
+                {
+                    inAM[attribute.first] = attributeMap[attribute.first];
+                }
+            }
+        }
+
+        retAM.push_back(inAM);
     }
 
-    return retVec;
+    return retAM;
 }
 
 std::vector<AttributeMap> getAttributeMapsWithout(std::string key, std::string value)

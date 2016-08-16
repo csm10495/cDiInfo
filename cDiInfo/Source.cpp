@@ -11,7 +11,7 @@
 void printUsage(int argc, char** argv)
 {
     std::cout << "cDiInfo: A program that gets information using the SetupDi... WinApi calls." << std::endl;
-    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | -getAll | -getAllJust | -getAllWithout] [<key> <value>]" << std::endl;
+    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | -getAll | -getAllJust | -getAllWithout] [<key> <value> (other,keys)]" << std::endl;
     std::cout << "Key and value used if applying to a specific device" << std::endl;
     std::cout << "You gave " << argc << " arg(s)." << std::endl;
 }
@@ -27,17 +27,17 @@ int main(int argc, char** argv)
     else if (argc == 2 && std::string(argv[1]) == "-keys")
     {
         std::vector<std::string> &keys = getSampleAttributeKeys();
-        printVectorOfStrings(keys, "Possible Attribute Map Keys: (Remember, not all devices have all of these)");
+        printVectorOfStrings(keys, "Possible Attribute Map Keys: (Remember, not all devices have all of these)", false);
     }
     else if (argc == 2 && std::string(argv[1]) == "-enumerators")
     {
         std::vector<std::string> &enumerators = getEnumerators();
-        printVectorOfStrings(enumerators, "Enumerators:");
+        printVectorOfStrings(enumerators, "Enumerators:", false);
     }
     else if (argc == 2 && std::string(argv[1]) == "-classes")
     {
         std::vector<std::string> &classes = getClasses();
-        printVectorOfStrings(classes, "Classes:");
+        printVectorOfStrings(classes, "Classes:", false);
     }
     else if (argc == 4 && std::string(argv[1]) == "-disable")
     {
@@ -74,10 +74,25 @@ int main(int argc, char** argv)
             printAttributeMap(i);
         }
     }
-    else if (argc == 4 && std::string(argv[1]) == "-getAllJust")
+    else if (argc >= 4 && std::string(argv[1]) == "-getAllJust")
     {
-        std::vector<std::string> &matchingAttributes = getAttributesWith(argv[2], argv[3]);
-        printVectorOfStrings(matchingAttributes, "All attributes of " + std::string(argv[2]) + " that match: " + std::string(argv[3]));
+        // This is comma delimited
+        std::string otherAttributes = "";
+        if (argc > 4)
+        {
+            otherAttributes = argv[4];
+            printf("Attributes of %s that match %s and keys that match: %s\n", argv[2], argv[3], otherAttributes.c_str());
+        }
+        else
+        {
+            printf("Attributes of %s that match %s\n", argv[2], argv[3]);
+        }
+
+        std::vector<AttributeMap> &matchingAttributeMaps = getAttributesWith(argv[2], argv[3], otherAttributes);
+        for (auto i : matchingAttributeMaps)
+        {
+            printAttributeMap(i);
+        }
     }
     else if (argc == 4 && std::string(argv[1]) == "-getAllWithout")
     {

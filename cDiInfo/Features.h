@@ -22,7 +22,7 @@ STATUS enableDevice(DEVINST devInst);
 void printAllInfo();
 
 // Prints a vector of strings with a title
-void printVectorOfStrings(std::vector<std::string> &vec, std::string title);
+void printVectorOfStrings(std::vector<std::string> &vec, std::string title, bool printStars);
 
 // Gets a vector of attribute keys (note that this may not be all possible ones)
 std::vector<std::string> getSampleAttributeKeys();
@@ -37,7 +37,7 @@ std::vector<std::string> getClasses();
 std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value);
 
 // Gets all Attributes that have a matching key and value
-std::vector<std::string> getAttributesWith(std::string key, std::string value);
+std::vector<AttributeMap> getAttributesWith(std::string key, std::string value, std::string alt);
 
 // Gets all AttributeMaps that don't have a matching key and value
 std::vector<AttributeMap> getAttributeMapsWithout(std::string key, std::string value);

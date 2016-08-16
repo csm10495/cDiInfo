@@ -10,6 +10,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <string.h>
 #include <iomanip>
 #include <iostream>
 
@@ -129,3 +130,6 @@ std::string usbConnectionStatusToString(USB_CONNECTION_STATUS tmp);
 
 // Parses the SMART data into a string
 std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThresholds);
+
+// Split a string with a delim
+std::vector<std::string> split(std::string s, const char delim);

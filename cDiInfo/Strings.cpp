@@ -2241,3 +2241,23 @@ std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThres
 
     return retStr;
 }
+
+std::vector<std::string> split(std::string s, const char delim)
+{
+    std::vector<std::string> retVec;
+
+    char* cStr = new char[s.size() + 1];
+    strncpy_s(cStr, s.size() + 1, s.c_str(), s.size());
+    char * ptr;
+    char * token;
+    // strtok_s is thread-safe on VC++
+    token = strtok_s(cStr, &delim, &ptr);
+    while (token)
+    {
+        retVec.push_back(token);
+        token = strtok_s(NULL, &delim, &ptr);
+    }
+
+    delete[]cStr;
+    return retVec;
+}
