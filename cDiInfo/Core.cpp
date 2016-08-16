@@ -1053,16 +1053,6 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                         }
                         addToMap(devAttrMap, SMARTReturnStatus);
                     } 
-                    
-                    memset(&b, 0, sizeof(b));
-                    smartSendCmdParams->cBufferSize = sizeof(b);
-                    ideRegs.bCommandReg = ID_CMD;
-                    smartSendCmdParams->irDriveRegs = ideRegs;
-                    if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
-                    {
-                        auto ataData = (PIDENTIFY_DEVICE_DATA)(b + bytesReturned - sizeof(IDENTIFY_DEVICE_DATA));
-                        char c = 'a';
-                    }
 
                     addToMap(devAttrMap, SMARTData);
                 }
