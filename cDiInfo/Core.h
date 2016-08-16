@@ -63,6 +63,11 @@ typedef struct _MEDIA_SERIAL_NUMBER_DATA {
 //   name of attribute -> string of attribute value
 typedef std::map<std::string, std::string> AttributeMap;
 
+// For SMART parsing
+#define BAD_SMART_LOW   0xF4
+#define BAD_SMART_HIGH  0x2C
+// For Drive size conversion
+#define BYTES_IN_GIGABYTE 1073741824
 // Used to designate that we couldn't get this attribute
 #define UNAVAILABLE_ATTRIBUTE "<Attribute Unavailable>"
 // Used to designate an inability to find children

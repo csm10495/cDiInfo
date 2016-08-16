@@ -1031,11 +1031,47 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 512)
                     {
                         // This math comes from the SMART Thresholds being in the last 512 bytes. Don't care about the rest.
-                        smartThresholds = b + (bytesReturned - 512);
+                        smartThresholds = b + (bytesReturned - READ_THRESHOLD_BUFFER_SIZE);
                     }
 
-                    std::string SMARTData = smartToString((BYTE*)storagePredictFailure.VendorSpecific, 512, smartThresholds);
+                    std::string SMARTData = smartToString((BYTE*)storagePredictFailure.VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, smartThresholds);
+
+                    // SMART Return Status (should say if a threshold exceeded condition)
+                    memset(&b, 0, sizeof(b));
+                    smartSendCmdParams->cBufferSize = sizeof(b);
+                    ideRegs.bFeaturesReg = RETURN_SMART_STATUS;
+                    ideRegs.bCylLowReg = SMART_CYL_LOW;
+                    ideRegs.bCylHighReg = SMART_CYL_HI;
+                    ideRegs.bCommandReg = SMART_CMD;
+                    smartSendCmdParams->irDriveRegs = ideRegs;
+                    if (DeviceIoControl(handle, SMART_SEND_DRIVE_COMMAND, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+                    {
+                        std::string SMARTReturnStatus = "Healthy";
+                        if (ideRegs.bCylLowReg == BAD_SMART_LOW && ideRegs.bCylHighReg == BAD_SMART_HIGH)
+                        {
+                            SMARTReturnStatus = "Threshold Exceeded Condition";
+                        }
+                        addToMap(devAttrMap, SMARTReturnStatus);
+                    } 
+                    
+                    memset(&b, 0, sizeof(b));
+                    smartSendCmdParams->cBufferSize = sizeof(b);
+                    ideRegs.bCommandReg = ID_CMD;
+                    smartSendCmdParams->irDriveRegs = ideRegs;
+                    if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+                    {
+                        auto ataData = (PIDENTIFY_DEVICE_DATA)(b + bytesReturned - sizeof(IDENTIFY_DEVICE_DATA));
+                        char c = 'a';
+                    }
+
                     addToMap(devAttrMap, SMARTData);
+                }
+
+                DISK_GEOMETRY_EX diskGeoEx = { 0 };
+                if (DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, NULL, &diskGeoEx, sizeof(DISK_GEOMETRY_EX), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string DiskSize = std::to_string(diskGeoEx.DiskSize.QuadPart) + " Bytes" + " (" + std::to_string(diskGeoEx.DiskSize.QuadPart / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
+                    addToMap(devAttrMap, DiskSize);
                 }
 
                 USB_HUB_CAPABILITIES_EX usbHubCapabilities = { 0 };

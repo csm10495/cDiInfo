@@ -133,3 +133,6 @@ std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThres
 
 // Split a string with a delim
 std::vector<std::string> split(std::string s, const char delim);
+
+// Converts a SMART id to a string name... these may not be perfect, but should be close.
+std::string smartIdToString(UINT8 smartId);

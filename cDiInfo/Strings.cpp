@@ -2025,7 +2025,7 @@ std::string numToHexString(UINT64 number, int width)
     else
     {
         char charArray[7] = { "\0" };
-        snprintf(charArray, 7, "0x%X", (unsigned int) number);
+        snprintf(charArray, 7, "0x%X", (unsigned int)number);
         return std::string(charArray);
     }
 }
@@ -2212,7 +2212,7 @@ std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThres
 
     UINT16 smartIdx = 2; // skip the VU smart version number (2 bytes)
     UINT16 threshIdx = 2;
-    std::string retStr = "ID    Current   Worst     Raw Value       Threshold\n";
+    std::string retStr = "ID    Current   Worst     Raw Value       Threshold   Name\n";
     char buffer[128] = { '\0' };
     while (smartIdx < smartLength && threshIdx < 512)
     {
@@ -2227,7 +2227,7 @@ std::string smartToString(BYTE* smartBytes, UINT16 smartLength, BYTE* smartThres
                 threshold = std::to_string(smartThreshold->ThresholdValue);
             }
 
-            snprintf(buffer, sizeof(buffer), "%02X    %03d       %03lld       0x%010I64X   %3s\n\0", smartAttribute->Id, smartAttribute->CurrentValue, smartAttribute->WorstValue, smartAttribute->RawValue, threshold.c_str());
+            snprintf(buffer, sizeof(buffer), "%02X    %03d       %03lld       0x%010I64X     %3s        %s\n\0", smartAttribute->Id, smartAttribute->CurrentValue, smartAttribute->WorstValue, smartAttribute->RawValue, threshold.c_str(), smartIdToString(smartAttribute->Id).c_str());
             retStr += buffer;
         }
         else
@@ -2260,4 +2260,110 @@ std::vector<std::string> split(std::string s, const char delim)
 
     delete[]cStr;
     return retVec;
+}
+
+std::string smartIdToString(UINT8 smartId)
+{
+    switch (smartId)
+    {
+    case 0x00:
+        return "Invalid";
+    case 0x01:
+        return "Raw Read Error Rate";
+    case 0x02:
+        return "Throughput Performance";
+    case 0x03:
+        return "Spinup Time";
+    case 0x04:
+        return "Start/Stop Count";
+    case 0x05:
+        return "Reallocated Sector Count";
+    case 0x06:
+        return "Read Channel Margin";
+    case 0x07:
+        return "Seek Error Rate";
+    case 0x08:
+        return "Seek Timer Performance";
+    case 0x09:
+        return "Power-On Hours Count";
+    case 0x0A:
+        return "Spinup Retry Count";
+    case 0x0B:
+        return "Calibration Retry Count";
+    case 0x0C:
+        return "Power Cycle Count";
+    case 0x0D:
+        return "Soft Read Error Rate";
+    case 0xB1:
+        return "Wear Range Delta";
+    case 0xBF:
+        return "G-Sense Error Rate";
+    case 0xC0:
+        return "Power-Off Retract Count";
+    case 0xC1:
+        return "Load/Unload Cycle Count";
+    case 0xC2:
+        return "HDA Temperature";
+    case 0xC3:
+        return "Hardware ECC Recovered";
+    case 0xC4:
+        return "Reallocation Count";
+    case 0xC5:
+        return "Current Pending Sector Count";
+    case 0xC6:
+        return "Offline Scan Uncorrectable Count";
+    case 0xC7:
+        return "UDMA CRC Error Rate";
+    case 0xC8:
+        return "Write Error Rate";
+    case 0xC9:
+        return "Soft Read Error Rate";
+    case 0xCA:
+        return "Data Address Mark Errors";
+    case 0xCB:
+        return "Run Out Cancel";
+    case 0xCC:
+        return "Soft ECC Correction";
+    case 0xCD:
+        return "Thermal Asperite Rate (TAR)";
+    case 0xCE:
+        return "Flying Height";
+    case 0xCF:
+        return "Spin High Current";
+    case 0xD0:
+        return "Spin Buzz";
+    case 0xD1:
+        return "Offline Seek Performance";
+    case 0xDC:
+        return "Disk Shift";
+    case 0xDD:
+        return "G-Sense Error Rate";
+    case 0xDE:
+        return "Loaded Hours";
+    case 0xDF:
+        return "Load/Unload Retry Count";
+    case 0xE0:
+        return "Load Friction";
+    case 0xE1:
+        return "Load/Unload Cycle Count";
+    case 0xE2:
+        return "Load-In Time";
+    case 0xE3:
+        return "Torque Amplification Count";
+    case 0xE4:
+        return "Power-Off Retract Count";
+    case 0xE6:
+        return "GMR Head Amplitude";
+    case 0xE7:
+        return "Temperature";
+    case 0xF0:
+        return "Head Flying Hours";
+    case 0xF1:
+        return "Total LBAs Written";
+    case 0xF2:
+        return "Total LBAs Read";
+    case 0xFA:
+        return "Read Error Retry Rate";
+    }
+    return "Unknown";
 }
