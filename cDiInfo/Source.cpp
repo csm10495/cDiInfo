@@ -107,6 +107,5 @@ int main(int argc, char** argv)
         printUsage(argc, argv);
     }
 
-
     return returnCode;
 }

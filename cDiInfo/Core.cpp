@@ -558,6 +558,7 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
         {
             CM_Free_Res_Des_Handle(firstLogConf);
             CM_Free_Log_Conf_Handle(firstLogConf);
+            firstLogConf = NULL;
             return;
         };
 
@@ -568,6 +569,7 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
             if (cmRet != CR_SUCCESS)
             {
                 CM_Free_Res_Des_Handle(nextLogConf);
+                nextLogConf = NULL;
                 break;
             };
 
@@ -576,6 +578,7 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
             if (cmRet != CR_SUCCESS)
             {
                 CM_Free_Res_Des_Handle(nextLogConf);
+                nextLogConf = NULL;
                 delete[] buffer;
                 continue;
             }
@@ -593,11 +596,17 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
             }
             attributeMap[resourceTypeAsStringWithNumber] = resourceAsString;
 
-
+            LOG_CONF old = nextLogConf;
             if (CM_Get_Next_Res_Des(&nextLogConf, nextLogConf, ResType_All, &resourceType, 0) != CR_SUCCESS)
             {
                 CM_Free_Res_Des_Handle(nextLogConf);
+                nextLogConf = NULL;
                 break;
+            }
+            else
+            {
+                CM_Free_Res_Des_Handle(old);
+                old = NULL;
             }
         }
 
@@ -606,8 +615,10 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
         {
             break;
         }
+
     }
     CM_Free_Log_Conf_Handle(firstLogConf);
+    firstLogConf = NULL;
 }
 
 void addInterfaceConfigurationAndResources(AttributeMap &attributeMap)

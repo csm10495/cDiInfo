@@ -1630,11 +1630,13 @@ std::string propertyBufferToString(BYTE* propertyBuffer, ULONG propertyBufferSiz
     {
         SECURITY_DESCRIPTOR securityDescriptor;
         memcpy(&securityDescriptor, propertyBuffer, sizeof(SECURITY_DESCRIPTOR));
-        ULONG retStrLen = 1000;
-        std::string retStr(" ", retStrLen);
-        if (ConvertSecurityDescriptorToStringSecurityDescriptor(&securityDescriptor, SDDL_REVISION_1, OWNER_SECURITY_INFORMATION, (char**)retStr.data(), &retStrLen))
+        char * charStr = nullptr;
+        if (ConvertSecurityDescriptorToStringSecurityDescriptor(&securityDescriptor, SDDL_REVISION_1, OWNER_SECURITY_INFORMATION, &charStr, NULL))
         {
-            return std::string(retStr.data(), retStrLen);
+            // the charStr must be NULL terminated.
+            std::string retStr = std::string(charStr);
+            LocalFree(charStr);
+            return retStr;
         }
         else
         {
