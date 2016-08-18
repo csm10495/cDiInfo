@@ -2369,3 +2369,31 @@ std::string smartIdToString(UINT8 smartId)
     }
     return "Unknown";
 }
+
+std::string gptAttributesToString(ULONGLONG gptAttr)
+{
+    std::string retStr = "";
+    if (gptAttr & GPT_BASIC_DATA_ATTRIBUTE_READ_ONLY)
+    {
+        retStr += "(Read-Only) ";
+    }
+    if (gptAttr & GPT_BASIC_DATA_ATTRIBUTE_SHADOW_COPY)
+    {
+        retStr += "(Shadow Copy) ";
+    }
+    if (gptAttr & GPT_BASIC_DATA_ATTRIBUTE_HIDDEN)
+    {
+        retStr += "(Hidden) ";
+    }
+    if (gptAttr & GPT_BASIC_DATA_ATTRIBUTE_NO_DRIVE_LETTER)
+    {
+        retStr += "(No Drive Letter) ";
+    }
+
+    if (rTrim(retStr) == "")
+    {
+        retStr = "No Attributes Available";
+    }
+
+    return retStr;
+}

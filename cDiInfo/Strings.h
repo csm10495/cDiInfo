@@ -136,3 +136,6 @@ std::vector<std::string> split(std::string s, const char delim);
 
 // Converts a SMART id to a string name... these may not be perfect, but should be close.
 std::string smartIdToString(UINT8 smartId);
+
+// Converts the GptAttributes to a string
+std::string gptAttributesToString(ULONGLONG gptAttr);

@@ -1146,6 +1146,81 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     addToMap(devAttrMap, RootHubName);
                 }
 
+                memset(&b, 0, sizeof(b));
+                PVOLUME_DISK_EXTENTS volumeDiskExtents = (PVOLUME_DISK_EXTENTS)b;
+                if (DeviceIoControl(handle, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    std::string NumberOfDiskExtents = std::to_string(volumeDiskExtents->NumberOfDiskExtents);
+                    addToMap(devAttrMap, NumberOfDiskExtents);
+
+                    DISK_EXTENT * thisExtent = volumeDiskExtents->Extents;
+                    for (size_t i = 0; i < volumeDiskExtents->NumberOfDiskExtents; i++)
+                    {
+                        std::string DiskExtent = "Disk Number: " + std::to_string(thisExtent->DiskNumber) + "\n";
+                        DiskExtent += "Starting Offset: Byte " + std::to_string(thisExtent->StartingOffset.QuadPart) + "\n";
+                        DiskExtent += "Extent Length: " + std::to_string(thisExtent->ExtentLength.QuadPart) + " Bytes";
+                        devAttrMap["DiskExtent" + std::to_string(i)] = DiskExtent;
+
+                        // Should do pointer math and move to the next extent
+                        thisExtent++;
+                    }
+                }
+
+                if (DeviceIoControl(handle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    PNTFS_VOLUME_DATA_BUFFER p = (PNTFS_VOLUME_DATA_BUFFER)b;
+
+                    std::string VolumeSerialNumber = std::to_string(p->VolumeSerialNumber.QuadPart);
+                    addToMap(devAttrMap, VolumeSerialNumber);
+
+                    std::string NumberSectors = std::to_string(p->NumberSectors.QuadPart);
+                    addToMap(devAttrMap, NumberSectors);
+
+                    std::string TotalClusters = std::to_string(p->TotalClusters.QuadPart);
+                    addToMap(devAttrMap, TotalClusters);
+
+                    std::string FreeClusters = std::to_string(p->FreeClusters.QuadPart);
+                    addToMap(devAttrMap, FreeClusters);
+
+                    std::string TotalReserved = std::to_string(p->TotalReserved.QuadPart);
+                    addToMap(devAttrMap, TotalReserved);
+
+                    std::string BytesPerSector = std::to_string(p->BytesPerSector);
+                    addToMap(devAttrMap, BytesPerSector);
+
+                    std::string BytesPerCluster = std::to_string(p->BytesPerCluster);
+                    addToMap(devAttrMap, BytesPerCluster);
+
+                    std::string BytesPerFileRecordSegment = std::to_string(p->BytesPerFileRecordSegment);
+                    addToMap(devAttrMap, BytesPerFileRecordSegment);
+
+                    std::string ClustersPerFileRecordSegment = std::to_string(p->ClustersPerFileRecordSegment);
+                    addToMap(devAttrMap, ClustersPerFileRecordSegment);
+
+                    std::string MftValidDataLength = std::to_string(p->MftValidDataLength.QuadPart);
+                    addToMap(devAttrMap, MftValidDataLength);
+
+                    std::string MftStartLcn = std::to_string(p->MftStartLcn.QuadPart);
+                    addToMap(devAttrMap, MftStartLcn);
+
+                    std::string Mft2StartLcn = std::to_string(p->Mft2StartLcn.QuadPart);
+                    addToMap(devAttrMap, Mft2StartLcn);
+
+                    std::string MftZoneStart = std::to_string(p->MftZoneStart.QuadPart);
+                    addToMap(devAttrMap, MftZoneStart);
+
+                    std::string MftZoneEnd = std::to_string(p->MftZoneEnd.QuadPart);
+                    addToMap(devAttrMap, MftZoneEnd);
+                }
+
+                if (DeviceIoControl(handle, IOCTL_VOLUME_GET_GPT_ATTRIBUTES, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION p = (PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION)b;
+
+                    std::string GPTAttributes = gptAttributesToString(p->GptAttributes);
+                    addToMap(devAttrMap, GPTAttributes);
+                }
+
                 CloseHandle(handle);
             }
 
