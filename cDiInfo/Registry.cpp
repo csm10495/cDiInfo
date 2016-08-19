@@ -13,6 +13,9 @@ bool getStringFromRegistry(HKEY hKey, std::string subKey, std::string value, std
     DWORD type;
     LONG retVal = RegGetValue(hKey, subKey.c_str(), value.c_str(), RRF_RT_ANY, NULL, NULL, &size);
 
+    // For some reason this doesn't always work unless I add a bit (maybe for a null terminator?)
+    size = size + 1;
+    
     if (retVal == ERROR_SUCCESS)
     {
         char * allocatedString = new char[size];

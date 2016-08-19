@@ -469,6 +469,30 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::
     // Get Resource Descriptor Data
     addDeviceConfigurationAndResources(devAttrMap, devInfo.DevInst);
 
+    // Get service information from the registry
+    std::string subKey = "SYSTEM\\CurrentControlSet\\Services\\" + Service;
+    std::string ServiceImagePath = "";
+    if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ImagePath", ServiceImagePath))
+    {
+        // Sometimes this path will start with \\SystemRoot\\System32 and sometimes \\System32\\
+        //   Try to standardize it.
+        char systemDirectory[MAX_PATH] = { '\0' };
+        if (GetSystemDirectory(systemDirectory, MAX_PATH))
+        {
+            if (startsWith(SYSTEM_ROOT1, ServiceImagePath, true))
+            {
+                ServiceImagePath = systemDirectory + ServiceImagePath.substr(strlen(SYSTEM_ROOT1));
+            }
+            else if (startsWith(SYSTEM_ROOT2, ServiceImagePath, true))
+            {
+                ServiceImagePath = systemDirectory + ServiceImagePath.substr(strlen(SYSTEM_ROOT2));
+            }
+        }
+        addToMap(devAttrMap, ServiceImagePath);
+    }
+
+    
+    //GetSystemDirectory
     return devAttrMap;
 }
 

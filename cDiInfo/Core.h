@@ -80,6 +80,9 @@ typedef std::map<std::string, std::string> AttributeMap;
 #define NO_PROBLEM "<No Problem Detected>"
 // Used as a (sketchy) way of passing a DEVINST in a string vector
 #define DEVINFO_DATA_STRING "__devInfoDataString"
+// Possible aliases to SystemRoot
+#define SYSTEM_ROOT1 "\\SystemRoot\\System32"
+#define SYSTEM_ROOT2 "System32"
 // Take a map and add a given item. Use the name of the field as the key of the map.
 #define addToMap(map, itm) if (itm != UNAVAILABLE_ATTRIBUTE){map[#itm] = itm;}
 
