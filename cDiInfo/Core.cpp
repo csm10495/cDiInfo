@@ -470,7 +470,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::
     addDeviceConfigurationAndResources(devAttrMap, devInfo.DevInst);
 
     // Get service information from the registry
-    std::string subKey = "SYSTEM\\CurrentControlSet\\Services\\" + Service;
+    std::string subKey = REGISTRY_SERVICES + Service;
     std::string ServiceImagePath = "";
     if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ImagePath", ServiceImagePath))
     {
@@ -489,6 +489,32 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::
             }
         }
         addToMap(devAttrMap, ServiceImagePath);
+    }
+
+    UINT64 u = 0;
+    if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ErrorControl", u))
+    {
+        std::string ServiceErrorControl = errorControlToString((DWORD)u);
+        addToMap(devAttrMap, ServiceErrorControl);
+    }
+
+    u = 0;
+    if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "Start", u))
+    {
+        std::string ServiceStartType = startTypeToString((DWORD)u);
+        addToMap(devAttrMap, ServiceStartType);
+    }
+    u = 0;
+    if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "Type", u))
+    {
+        std::string ServiceType = serviceTypeToString((DWORD)u);
+        addToMap(devAttrMap, ServiceType);
+    }
+
+    std::string ObjectName = "";
+    if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ObjectName", ObjectName))
+    {
+        addToMap(devAttrMap, ObjectName);
     }
 
     
@@ -1243,6 +1269,13 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                     std::string GPTAttributes = gptAttributesToString(p->GptAttributes);
                     addToMap(devAttrMap, GPTAttributes);
+                }
+
+                if (DeviceIoControl(handle, IOCTL_SERIAL_GET_COMMSTATUS, NULL, 0, b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    PULONG baud = (PULONG)b;
+                    std::string BaudRate = std::to_string(*baud);
+                    addToMap(devAttrMap, BaudRate)
                 }
 
                 CloseHandle(handle);

@@ -85,6 +85,8 @@ typedef std::map<std::string, std::string> AttributeMap;
 #define SYSTEM_ROOT2 "System32"
 // Take a map and add a given item. Use the name of the field as the key of the map.
 #define addToMap(map, itm) if (itm != UNAVAILABLE_ATTRIBUTE){map[#itm] = itm;}
+// Here to avoid warnings from importing ntddser.h
+#define IOCTL_SERIAL_GET_COMMSTATUS	0x1b006c
 
 // Get an HDEVINFO for all classes 
 HDEVINFO getAllClassesHDevInfo();

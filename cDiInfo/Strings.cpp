@@ -2397,3 +2397,80 @@ std::string gptAttributesToString(ULONGLONG gptAttr)
 
     return retStr;
 }
+
+std::string errorControlToString(DWORD errorControl)
+{
+    if (errorControl == SERVICE_ERROR_CRITICAL)
+    {
+        return "SERVICE_ERROR_CRITICAL";
+    }
+    else if (errorControl == SERVICE_ERROR_SEVERE)
+    {
+        return "SERVICE_ERROR_SEVERE";
+    }
+    else if (errorControl == SERVICE_ERROR_NORMAL)
+    {
+        return "SERVICE_ERROR_NORMAL";
+    }
+    else if (errorControl == SERVICE_ERROR_IGNORE)
+    {
+        return "SERVICE_ERROR_IGNORE";
+    }
+
+    return "Unknown Error Control";
+}
+
+std::string startTypeToString(DWORD tmp)
+{
+    switch (tmp)
+    {
+    case(SERVICE_BOOT_START):
+        return "SERVICE_BOOT_START - Loaded by the boot loader, needed for startup";
+    case(SERVICE_SYSTEM_START):
+        return "SERVICE_SYSTEM_START - Loaded during Kernel initialization";
+    case(SERVICE_AUTO_START):
+        return "SERVICE_AUTO_START - Loaded automatically";
+    case(SERVICE_DEMAND_START):
+        return "SERVICE_DEMAND_START - Not started till the user starts it";
+    case(SERVICE_DISABLED):
+        return "SERVICE_DISABLED";
+    }
+    return "No Enum Value Matches, Unknown";
+}
+
+std::string serviceTypeToString(DWORD tmp)
+{
+    switch (tmp)
+    {
+    case(SERVICE_KERNEL_DRIVER):
+        return "SERVICE_KERNEL_DRIVER";
+    case(SERVICE_FILE_SYSTEM_DRIVER):
+        return "SERVICE_FILE_SYSTEM_DRIVER";
+    case(SERVICE_ADAPTER):
+        return "SERVICE_ADAPTER";
+    case(SERVICE_RECOGNIZER_DRIVER):
+        return "SERVICE_RECOGNIZER_DRIVER";
+    case(SERVICE_WIN32_OWN_PROCESS):
+        return "SERVICE_WIN32_OWN_PROCESS"; 
+    case(SERVICE_WIN32_SHARE_PROCESS):
+        return "SERVICE_WIN32_SHARE_PROCESS";
+    case(SERVICE_USER_SERVICE):
+        return "SERVICE_USER_SERVICE";
+    case(SERVICE_USERSERVICE_INSTANCE):
+        return "SERVICE_USERSERVICE_INSTANCE";
+    case(SERVICE_INTERACTIVE_PROCESS):
+        return "SERVICE_INTERACTIVE_PROCESS";
+    case(SERVICE_DRIVER):
+        return "SERVICE_DRIVER";
+    case(SERVICE_WIN32):
+        return "SERVICE_WIN32";
+    case(SERVICE_USER_SHARE_PROCESS):
+        return "SERVICE_USER_SHARE_PROCESS";
+    case(SERVICE_USER_OWN_PROCESS):
+        return "SERVICE_USER_OWN_PROCESS";
+    case(SERVICE_TYPE_ALL):
+        return "SERVICE_TYPE_ALL";
+    }
+
+    return "Unknwon Service Type";
+}

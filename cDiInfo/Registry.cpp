@@ -32,3 +32,15 @@ bool getStringFromRegistry(HKEY hKey, std::string subKey, std::string value, std
 
     return false;
 }
+
+bool getUIntFromRegistry(HKEY hkey, std::string subKey, std::string value, UINT64 &output)
+{
+    std::string outString = "";
+    if (getStringFromRegistry(hkey, subKey, value, outString))
+    {
+        // Now we have a string, cast it back to UINT64
+        memcpy(&output, outString.data(), outString.size());
+        return true;
+    }
+    return false;
+}

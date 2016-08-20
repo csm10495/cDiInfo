@@ -139,3 +139,12 @@ std::string smartIdToString(UINT8 smartId);
 
 // Converts the GptAttributes to a string
 std::string gptAttributesToString(ULONGLONG gptAttr);
+
+// Converts an ErrorControl to string
+std::string errorControlToString(DWORD errorControl);
+
+// Converts a StartType to string
+std::string startTypeToString(DWORD tmp);
+
+// Converts a SerivceType to string
+std::string serviceTypeToString(DWORD tmp);
