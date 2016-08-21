@@ -2474,3 +2474,106 @@ std::string serviceTypeToString(DWORD tmp)
 
     return "Unknwon Service Type";
 }
+
+std::string fileSystemFlagToString(UINT32 flag)
+{
+    std::string retStr = "";
+
+    if (flag & FILE_CASE_SENSITIVE_SEARCH)
+    {
+        retStr += "(FILE_CASE_SENSITIVE_SEARCH) ";
+    }
+    if (flag & FILE_CASE_PRESERVED_NAMES)
+    {
+        retStr += "(FILE_CASE_PRESERVED_NAMES) ";
+    }
+    if (flag & FILE_UNICODE_ON_DISK)
+    {
+        retStr += "(FILE_UNICODE_ON_DISK) ";
+    }
+    if (flag & FILE_PERSISTENT_ACLS)
+    {
+        retStr += "(FILE_PERSISTENT_ACLS) ";
+    }
+    if (flag & FILE_FILE_COMPRESSION)
+    {
+        retStr += "(FILE_FILE_COMPRESSION) ";
+    }
+    if (flag & FILE_VOLUME_QUOTAS)
+    {
+        retStr += "(FILE_VOLUME_QUOTAS) ";
+    }
+    if (flag & FILE_SUPPORTS_SPARSE_FILES)
+    {
+        retStr += "(FILE_SUPPORTS_SPARSE_FILES) ";
+    }
+    if (flag & FILE_SUPPORTS_REPARSE_POINTS)
+    {
+        retStr += "(FILE_SUPPORTS_REPARSE_POINTS) ";
+    }
+    if (flag & FILE_SUPPORTS_REMOTE_STORAGE)
+    {
+        retStr += "(FILE_SUPPORTS_REMOTE_STORAGE) ";
+    }
+    if (flag & FILE_VOLUME_IS_COMPRESSED)
+    {
+        retStr += "(FILE_VOLUME_IS_COMPRESSED) ";
+    }
+    if (flag & FILE_SUPPORTS_OBJECT_IDS)
+    {
+        retStr += "(FILE_SUPPORTS_OBJECT_IDS) ";
+    }
+    if (flag & FILE_SUPPORTS_ENCRYPTION)
+    {
+        retStr += "(FILE_SUPPORTS_ENCRYPTION) ";
+    }
+    if (flag & FILE_NAMED_STREAMS)
+    {
+        retStr += "(FILE_NAMED_STREAMS) ";
+    }
+    if (flag & FILE_READ_ONLY_VOLUME)
+    {
+        retStr += "(FILE_READ_ONLY_VOLUME) ";
+    }
+    if (flag & FILE_SEQUENTIAL_WRITE_ONCE)
+    {
+        retStr += "(FILE_SEQUENTIAL_WRITE_ONCE) ";
+    }
+    if (flag & FILE_SUPPORTS_TRANSACTIONS)
+    {
+        retStr += "(FILE_SUPPORTS_TRANSACTIONS) ";
+    }
+    if (flag & FILE_SUPPORTS_HARD_LINKS)
+    {
+        retStr += "(FILE_SUPPORTS_HARD_LINKS) ";
+    }
+    if (flag & FILE_SUPPORTS_EXTENDED_ATTRIBUTES)
+    {
+        retStr += "(FILE_SUPPORTS_EXTENDED_ATTRIBUTES) ";
+    }
+    if (flag & FILE_SUPPORTS_OPEN_BY_FILE_ID)
+    {
+        retStr += "(FILE_SUPPORTS_OPEN_BY_FILE_ID) ";
+    }
+    if (flag & FILE_SUPPORTS_USN_JOURNAL)
+    {
+        retStr += "(FILE_SUPPORTS_USN_JOURNAL) ";
+    }
+    if (flag & FILE_SUPPORTS_INTEGRITY_STREAMS)
+    {
+        retStr += "(FILE_SUPPORTS_INTEGRITY_STREAMS) ";
+    }
+    if (flag & FILE_SUPPORTS_BLOCK_REFCOUNTING)
+    {
+        retStr += "(FILE_SUPPORTS_BLOCK_REFCOUNTING) ";
+    }
+    if (flag & FILE_SUPPORTS_SPARSE_VDL)
+    {
+        retStr += "(FILE_SUPPORTS_SPARSE_VDL) ";
+    }
+    if (retStr.empty())
+    {
+        retStr = "No Flags";
+    }
+    return retStr;
+}

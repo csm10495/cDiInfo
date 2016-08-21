@@ -517,7 +517,7 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::
         addToMap(devAttrMap, ObjectName);
     }
 
-    
+
     //GetSystemDirectory
     return devAttrMap;
 }
@@ -786,6 +786,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
     HDEVINFO interfaceDevs = getInterfaceHDevInfo(classGuid);
     std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
+    std::map<std::string, std::string> msDosDeviceNameToDriveLetterMap = getMsDosDeviceNameToDriveLetterMap();
 
     if (interfaceDevs == INVALID_HANDLE_VALUE)
     {
@@ -853,6 +854,23 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                 std::string MSDosDeviceName = std::string(targetPaths, targetPathsLength);
                 MSDosDeviceName = delimitedStringToNewlineString(MSDosDeviceName);
                 addToMap(devAttrMap, MSDosDeviceName);
+
+                // Map to drive letter... not quite sure what would happen if a volume spans multple MSDosDevices...
+                if (msDosDeviceNameToDriveLetterMap.find(MSDosDeviceName) != msDosDeviceNameToDriveLetterMap.end())
+                {
+                    std::string DriveLetter = msDosDeviceNameToDriveLetterMap[MSDosDeviceName];
+                    addToMap(devAttrMap, DriveLetter);
+
+                    std::string driveLetterWithBackslash = DriveLetter + "\\";
+                    memset(&targetPaths, '\0', sizeof(targetPaths));
+
+                    // Volume information
+                    if (GetVolumeNameForVolumeMountPoint(driveLetterWithBackslash.c_str(), targetPaths, sizeof(targetPaths)))
+                    {
+                        std::string VolumeName = targetPaths;
+                        addToMap(devAttrMap, VolumeName);
+                    }
+                }
             }
 
             addInterfaceConfigurationAndResources(devAttrMap);
@@ -1083,9 +1101,9 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                     smartSendCmdParams->cBufferSize = sizeof(b);
                     IDEREGS ideRegs = { 0 };
                     ideRegs.bFeaturesReg = READ_THRESHOLDS;
-                    ideRegs.bCylLowReg   = SMART_CYL_LOW; 
-                    ideRegs.bCylHighReg  = SMART_CYL_HI; 
-                    ideRegs.bCommandReg  = SMART_CMD;
+                    ideRegs.bCylLowReg = SMART_CYL_LOW;
+                    ideRegs.bCylHighReg = SMART_CYL_HI;
+                    ideRegs.bCommandReg = SMART_CMD;
                     smartSendCmdParams->irDriveRegs = ideRegs;
                     BYTE* smartThresholds = NULL;
 
@@ -1113,7 +1131,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                             SMARTReturnStatus = "Threshold Exceeded Condition";
                         }
                         addToMap(devAttrMap, SMARTReturnStatus);
-                    } 
+                    }
 
                     addToMap(devAttrMap, SMARTData);
                 }
@@ -1275,7 +1293,30 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
                 {
                     PULONG baud = (PULONG)b;
                     std::string BaudRate = std::to_string(*baud);
-                    addToMap(devAttrMap, BaudRate)
+                    addToMap(devAttrMap, BaudRate);
+                }
+
+                memset(&b, 0, sizeof(b));
+                DWORD volumeSerialNumber = 0;
+                DWORD maximumComponentLength = 0;
+                DWORD fileSystemFlags = 0;
+                wchar_t fileSystemNameBuffer[4096] = { '\0' };
+                if (GetVolumeInformationByHandleW(handle, (LPWSTR)b, sizeof(b), &volumeSerialNumber, &maximumComponentLength, &fileSystemFlags, fileSystemNameBuffer, 4096))
+                {
+                    std::string VolumeInformation = wStringToString(std::wstring((wchar_t*)b));
+                    addToMap(devAttrMap, VolumeInformation);
+
+                    std::string VolumeSerialNumber = std::to_string(volumeSerialNumber);
+                    addToMap(devAttrMap, VolumeSerialNumber);
+
+                    std::string MaximumComponentLength = std::to_string(maximumComponentLength);
+                    addToMap(devAttrMap, MaximumComponentLength);
+
+                    std::string FileSystemFlags = fileSystemFlagToString(fileSystemFlags);
+                    addToMap(devAttrMap, FileSystemFlags);
+
+                    std::string FileSystemName = wStringToString(std::wstring(fileSystemNameBuffer));
+                    addToMap(devAttrMap, FileSystemName);
                 }
 
                 CloseHandle(handle);
@@ -1488,4 +1529,22 @@ AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap)
     }
 
     return oldAMap;
+}
+
+std::map<std::string, std::string> getMsDosDeviceNameToDriveLetterMap()
+{
+    std::map<std::string, std::string> retMap;
+
+    // go through all drive letters
+    for (char i = 'A'; i <= 'Z'; i++)
+    {
+        std::string letterStr = std::string(1, i) + ":";
+        char msDosPath[MAX_PATH] = { '\0' };
+        if (QueryDosDevice(letterStr.c_str(), msDosPath, MAX_PATH))
+        {
+            retMap[msDosPath] = letterStr;
+        }
+    }
+
+    return retMap;
 }

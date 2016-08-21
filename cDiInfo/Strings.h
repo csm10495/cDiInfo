@@ -148,3 +148,6 @@ std::string startTypeToString(DWORD tmp);
 
 // Converts a SerivceType to string
 std::string serviceTypeToString(DWORD tmp);
+
+// Converts a file system flag to string
+std::string fileSystemFlagToString(UINT32 flag);
