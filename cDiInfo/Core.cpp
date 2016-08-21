@@ -750,19 +750,33 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
     if (classGuid == GUID_NULL)
     {
+#ifdef MULTITHREADED
         std::vector<std::future<std::vector<AttributeMap>>> vectorFutureVectorOfAttributeMaps;
-
+#else // SINGLETHEADED
+        std::vector<std::vector<AttributeMap>> vectorOfVectorOfAttributeMaps;
+#endif // SINGLETHEADED
         for (auto guid : ALL_GUIDS)
         {
+#ifdef MULTITHREADED
             // multithreading
             vectorFutureVectorOfAttributeMaps.push_back(std::async(getInterfaceAttributeMap, guid));
+#else // SINGLETHEADED
+            vectorOfVectorOfAttributeMaps.push_back(getInterfaceAttributeMap(guid));
+#endif // SINGLETHEADED
         }
 
+#ifdef MULTITHREADED
         // join
         for (std::future<std::vector<AttributeMap>> &futureVectorOfAttributeMaps : vectorFutureVectorOfAttributeMaps)
         {
             for (AttributeMap &attributeMap : futureVectorOfAttributeMaps.get())
             {
+#else // SINGLETHEADED
+        for (std::vector<AttributeMap> &vectorOfAttributeMaps : vectorOfVectorOfAttributeMaps)
+        {
+            for (AttributeMap &attributeMap : vectorOfAttributeMaps)
+            {
+#endif // SINGLETHEADED
                 bool merged = false;
                 for (AttributeMap &interfaceMap : interfaces)
                 {
@@ -1363,9 +1377,14 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
     }
 
     {
-        futureCompleteDevicesAttrMap = std::async(getInterfaceAttributeMap, GUID_NULL);
 
+#ifdef MULTITHREADED
+        futureCompleteDevicesAttrMap = std::async(getInterfaceAttributeMap, GUID_NULL);
         std::vector<std::future<AttributeMap>> devAttrMapsToAdd;
+#else // SINGLETHREADED
+        completeDevicesAttrMap = getInterfaceAttributeMap(GUID_NULL);
+        std::vector<AttributeMap> devAttrMapsToAdd;
+#endif // SINGLETHREADED
 
         std::map<std::string, SP_DEVINFO_DATA> deviceIdToInfoData;
 
@@ -1374,7 +1393,10 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
             std::string deviceId = getDeviceId(devInfo.DevInst);
             deviceIdToInfoData[deviceId] = devInfo;
         }
+
+#ifdef MULTITHREADED
         completeDevicesAttrMap = futureCompleteDevicesAttrMap.get();
+#endif // MULTITHEADED
 
         for (auto &dIAI : deviceIdToInfoData)
         {
@@ -1390,14 +1412,25 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
 
             if (needToAdd)
             {
+#ifdef MULTITHREADED
                 devAttrMapsToAdd.push_back(std::async(getDeviceAttributeMap, deviceDevs, dIAI.second, ref(scsiPortToDeviceIdMap)));
+#else // SINGLETHREADED
+                devAttrMapsToAdd.push_back(getDeviceAttributeMap(deviceDevs, dIAI.second, ref(scsiPortToDeviceIdMap)));
+#endif // SINGLETHREADED
             }
         }
 
+#ifdef MULTITHREADED
         for (std::future<AttributeMap> &futureAttrMap : devAttrMapsToAdd)
         {
             completeDevicesAttrMap.push_back(futureAttrMap.get());
         }
+#else // SINGLETHREADED
+        for (AttributeMap &attrMap : devAttrMapsToAdd)
+        {
+            completeDevicesAttrMap.push_back(attrMap);
+        }
+#endif // SINGLETHREADED
     }
 
 exit:
