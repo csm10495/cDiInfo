@@ -139,5 +139,8 @@ std::map<int, std::string> getScsiPortToDeviceIdMap();
 // Merges two AttributeMaps. If anything differs adds on a new line
 AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap);
 
+// Gets attributes via the DevicePath
+AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std::string, std::string> &msDosDeviceNameToDriveLetterMap);
+
 // Gets a map from MSDosDeviceName to drive letter
 std::map<std::string, std::string> getMsDosDeviceNameToDriveLetterMap();

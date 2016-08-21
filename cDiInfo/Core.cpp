@@ -852,489 +852,25 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
         if (SetupDiGetDeviceInterfaceDetail(interfaceDevs, &interfaceInfo, interfaceDetail, size, NULL, &devInfo))
         {
-            AttributeMap devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
-
+            AttributeMap devAttrMap;
             std::string InterfaceClassGuid = guidToString(interfaceInfo.InterfaceClassGuid);
-            addToMap(devAttrMap, InterfaceClassGuid);
-
             std::string DevicePath = interfaceDetail->DevicePath;
-            addToMap(devAttrMap, DevicePath);
 
-            char targetPaths[4096];
-            // substr(4) to get rid of the \\.\ 
-            DWORD targetPathsLength = QueryDosDevice(DevicePath.substr(4).c_str(), targetPaths, 4096);
-            if (targetPathsLength != 0)
-            {
-                std::string MSDosDeviceName = std::string(targetPaths, targetPathsLength);
-                MSDosDeviceName = delimitedStringToNewlineString(MSDosDeviceName);
-                addToMap(devAttrMap, MSDosDeviceName);
+#ifdef MULTITHREADED
+            std::future<AttributeMap> futureDevAttrMap = std::async(getDeviceAttributeMap, interfaceDevs, devInfo, ref(scsiPortToDeviceIdMap));
+#else // SINGLETHREADED
+            devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
+#endif // SINGLETHREADED
 
-                // Map to drive letter... not quite sure what would happen if a volume spans multple MSDosDevices...
-                if (msDosDeviceNameToDriveLetterMap.find(MSDosDeviceName) != msDosDeviceNameToDriveLetterMap.end())
-                {
-                    std::string DriveLetter = msDosDeviceNameToDriveLetterMap[MSDosDeviceName];
-                    addToMap(devAttrMap, DriveLetter);
+            AttributeMap otherAttrMap = getAttributeMapFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
 
-                    std::string driveLetterWithBackslash = DriveLetter + "\\";
-                    memset(&targetPaths, '\0', sizeof(targetPaths));
+#ifdef MULTITHREADED
+            devAttrMap = mergeAttributeMaps(futureDevAttrMap.get(), otherAttrMap);
+#else // SINGLETHREADED
+            mergeAttributeMaps(devAttrMap, otherAttrMap);
+#endif // SINGLETHREADED
 
-                    // Volume information
-                    if (GetVolumeNameForVolumeMountPoint(driveLetterWithBackslash.c_str(), targetPaths, sizeof(targetPaths)))
-                    {
-                        std::string VolumeName = targetPaths;
-                        addToMap(devAttrMap, VolumeName);
-                    }
-                }
-            }
-
-            addInterfaceConfigurationAndResources(devAttrMap);
-
-            // See if we can find a PHYSICALDRIVE path
-            HANDLE handle = CreateFile(DevicePath.c_str(),
-                GENERIC_WRITE | GENERIC_READ,
-                (FILE_SHARE_READ | FILE_SHARE_WRITE),
-                NULL,
-                OPEN_EXISTING,
-                NULL,
-                NULL);
-
-            if (handle != INVALID_HANDLE_VALUE)
-            {
-                DWORD bytesReturned;
-                STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
-                {
-                    std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
-                    addToMap(devAttrMap, PhysicalDrivePath);
-
-                    // substr(4) to get rid of the \\.\ 
-                    DWORD targetPathsLength = QueryDosDevice(PhysicalDrivePath.substr(4).c_str(), targetPaths, 4096);
-                    if (targetPathsLength != 0)
-                    {
-                        std::string MSDosPhysicalDriveDeviceName = std::string(targetPaths, targetPathsLength);
-                        MSDosPhysicalDriveDeviceName = delimitedStringToNewlineString(MSDosPhysicalDriveDeviceName);
-                        addToMap(devAttrMap, MSDosPhysicalDriveDeviceName);
-                    }
-
-                    std::string PartitionNumber;
-                    if (storageDeviceNumber.PartitionNumber == (DWORD)-1)
-                    {
-                        PartitionNumber = "<Device Cannot Be Partitioned>";
-                    }
-                    else
-                    {
-                        PartitionNumber = std::to_string(storageDeviceNumber.PartitionNumber);
-                    }
-                    addToMap(devAttrMap, PartitionNumber);
-
-                    std::string DeviceType = std::to_string(storageDeviceNumber.DeviceType);
-                    addToMap(devAttrMap, DeviceType);
-                }
-
-                SCSI_ADDRESS scsiAddress = { 0 };
-                if (DeviceIoControl(handle, IOCTL_SCSI_GET_ADDRESS, NULL, 0, &scsiAddress, sizeof(SCSI_ADDRESS), &bytesReturned, NULL))
-                {
-                    if (scsiAddress.Length == sizeof(SCSI_ADDRESS))
-                    {
-                        std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiAddress.PortNumber) + ":";
-                        addToMap(devAttrMap, ScsiAdapterPath);
-
-                        // substr(4) to get rid of the \\.\ 
-                        DWORD targetPathsLength = QueryDosDevice(ScsiAdapterPath.substr(4).c_str(), targetPaths, 4096);
-                        if (targetPathsLength != 0)
-                        {
-                            std::string MSDosAdapterName = std::string(targetPaths, targetPathsLength);
-                            MSDosAdapterName = delimitedStringToNewlineString(MSDosAdapterName);
-                            addToMap(devAttrMap, MSDosAdapterName);
-                        }
-
-                        std::string ScsiPathId = std::to_string(scsiAddress.PathId);
-                        addToMap(devAttrMap, ScsiPathId);
-
-                        std::string ScsiLun = std::to_string(scsiAddress.Lun);
-                        addToMap(devAttrMap, ScsiLun);
-
-                        std::string ScsiTargetId = std::to_string(scsiAddress.TargetId);
-                        addToMap(devAttrMap, ScsiTargetId);
-
-                        std::string ScsiPortNumber = std::to_string(scsiAddress.PortNumber);
-                        addToMap(devAttrMap, ScsiPortNumber);
-
-                        // Get IO_SCSI_CAPABILITIES
-                        IO_SCSI_CAPABILITIES ioScsiCapabilities = { 0 };
-                        if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, &ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL))
-                        {
-                            std::string MaximumTransferLength = std::to_string(ioScsiCapabilities.MaximumTransferLength);
-                            addToMap(devAttrMap, MaximumTransferLength);
-
-                            std::string MaximumPhysicalPages = std::to_string(ioScsiCapabilities.MaximumPhysicalPages);
-                            addToMap(devAttrMap, MaximumPhysicalPages);
-
-                            std::string SupportedAsynchronousEvents = toBoolString(ioScsiCapabilities.SupportedAsynchronousEvents);
-                            addToMap(devAttrMap, SupportedAsynchronousEvents);
-
-                            std::string AlignmentMask = std::to_string(ioScsiCapabilities.AlignmentMask);
-                            addToMap(devAttrMap, AlignmentMask);
-
-                            std::string TaggedQueuing = toBoolString(ioScsiCapabilities.TaggedQueuing);
-                            addToMap(devAttrMap, TaggedQueuing);
-
-                            std::string AdapterScansDown = toBoolString(ioScsiCapabilities.AdapterScansDown);
-                            addToMap(devAttrMap, AdapterScansDown);
-
-                            std::string AdapterUsesPio = toBoolString(ioScsiCapabilities.AdapterUsesPio);
-                            addToMap(devAttrMap, AdapterUsesPio);
-                        }
-                    }
-                }
-
-                // Get hotplug info
-                STORAGE_HOTPLUG_INFO storageHotplugInfo = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL) && bytesReturned != 0)
-                {
-                    std::string MediaRemovable = toBoolString(storageHotplugInfo.MediaRemovable);
-                    addToMap(devAttrMap, MediaRemovable);
-
-                    std::string MediaHotplug = toBoolString(storageHotplugInfo.MediaHotplug);
-                    addToMap(devAttrMap, MediaHotplug);
-
-                    std::string DeviceHotplug = toBoolString(storageHotplugInfo.DeviceHotplug);
-                    addToMap(devAttrMap, DeviceHotplug);
-                }
-
-                // Get media serial number
-                MEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(MEDIA_SERIAL_NUMBER_DATA), &bytesReturned, NULL) && bytesReturned != 0)
-                {
-                    std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData.SerialNumberData, mediaSerialNumberData.SerialNumberLength);
-                    addToMap(devAttrMap, MediaSerialNumber);
-                }
-
-                // Get media serial number
-                STORAGE_READ_CAPACITY storageReadCapacity = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL) && bytesReturned != 0)
-                {
-                    std::string BlockLength = std::to_string(storageReadCapacity.BlockLength);
-                    addToMap(devAttrMap, BlockLength);
-
-                    std::string NumberOfBlocks = std::to_string(storageReadCapacity.NumberOfBlocks.QuadPart);
-                    addToMap(devAttrMap, NumberOfBlocks);
-
-                    std::string DiskLength = std::to_string(storageReadCapacity.DiskLength.QuadPart);
-                    addToMap(devAttrMap, DiskLength);
-                }
-
-                // Get storage unique identifier
-                BYTE b[4096] = { 0 };
-                PSTORAGE_DEVICE_UNIQUE_IDENTIFIER pStorageDeviceUniqueIdentifer = (PSTORAGE_DEVICE_UNIQUE_IDENTIFIER)b;
-                STORAGE_PROPERTY_QUERY storagePropertyQuery;
-                memset(&storagePropertyQuery, 0, sizeof(STORAGE_PROPERTY_QUERY));
-                storagePropertyQuery.PropertyId = StorageDeviceUniqueIdProperty;
-                storagePropertyQuery.QueryType = PropertyStandardQuery;
-                if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL) && bytesReturned != 0)
-                {
-                    PSTORAGE_DEVICE_ID_DESCRIPTOR pStorageDeviceIdDescriptor = (PSTORAGE_DEVICE_ID_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceIdOffset);
-
-                    PSTORAGE_DEVICE_DESCRIPTOR pStorageDeviceDescriptor = (PSTORAGE_DEVICE_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceOffset);
-
-                    std::string CommandQueueing = toBoolString(pStorageDeviceDescriptor->CommandQueueing);
-                    addToMap(devAttrMap, CommandQueueing);
-
-                    if (pStorageDeviceDescriptor->VendorIdOffset != 0)
-                    {
-                        std::string VendorId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->VendorIdOffset));
-                        addToMap(devAttrMap, VendorId);
-                    }
-
-                    if (pStorageDeviceDescriptor->ProductIdOffset != 0)
-                    {
-                        std::string ProductId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductIdOffset));
-                        addToMap(devAttrMap, ProductId);
-                    }
-
-                    if (pStorageDeviceDescriptor->ProductRevisionOffset != 0)
-                    {
-                        std::string ProductRevision = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductRevisionOffset));
-                        addToMap(devAttrMap, ProductRevision);
-                    }
-
-                    if (pStorageDeviceDescriptor->SerialNumberOffset != 0)
-                    {
-                        std::string SerialNumber = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->SerialNumberOffset + 1));
-                        addToMap(devAttrMap, SerialNumber);
-                    }
-
-                    std::string BusType = storageBusTypeToString(pStorageDeviceDescriptor->BusType);
-                    addToMap(devAttrMap, BusType);
-
-                    PSTORAGE_DEVICE_LAYOUT_SIGNATURE pStorageDeviceLayoutSignature = (PSTORAGE_DEVICE_LAYOUT_SIGNATURE)(b + pStorageDeviceUniqueIdentifer->DriveLayoutSignatureOffset);
-                    // If MBR give that info, otherwise give GPT GUID
-                    if (pStorageDeviceLayoutSignature->Mbr)
-                    {
-                        std::string MbrSignature = std::to_string(pStorageDeviceLayoutSignature->DeviceSpecific.MbrSignature);
-                        addToMap(devAttrMap, MbrSignature)
-                    }
-                    else
-                    {
-                        std::string GptDiskId = guidToString(pStorageDeviceLayoutSignature->DeviceSpecific.GptDiskId);
-                        addToMap(devAttrMap, GptDiskId);
-                    }
-
-                    // Everything together... useful because a user can use CompareStorageDuids(...) to check for exact/sub matches
-                    std::string StorageDUID = byteArrayToString(b, bytesReturned);
-                    addToMap(devAttrMap, StorageDUID);
-                }
-
-                if (DeviceIoControl(handle, IOCTL_HID_GET_MANUFACTURER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string Manufacturer = wStringToString((wchar_t*)b);
-                    addToMap(devAttrMap, Manufacturer);
-                }
-
-                if (DeviceIoControl(handle, IOCTL_HID_GET_PRODUCT_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string ProductId = wStringToString((wchar_t*)b);
-                    addToMap(devAttrMap, ProductId);
-                }
-
-                if (DeviceIoControl(handle, IOCTL_HID_GET_SERIALNUMBER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string SerialNumber = wStringToString((wchar_t*)b);
-                    addToMap(devAttrMap, SerialNumber);
-                }
-
-                STORAGE_PREDICT_FAILURE storagePredictFailure = { 0 };
-                if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, &storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string PredictFailure = toBoolString(storagePredictFailure.PredictFailure);
-                    addToMap(devAttrMap, PredictFailure);
-
-                    // Get SMART Thresholds
-                    memset(&b, 0, sizeof(b));
-                    PSENDCMDINPARAMS smartSendCmdParams = (PSENDCMDINPARAMS)b;
-                    smartSendCmdParams->cBufferSize = sizeof(b);
-                    IDEREGS ideRegs = { 0 };
-                    ideRegs.bFeaturesReg = READ_THRESHOLDS;
-                    ideRegs.bCylLowReg = SMART_CYL_LOW;
-                    ideRegs.bCylHighReg = SMART_CYL_HI;
-                    ideRegs.bCommandReg = SMART_CMD;
-                    smartSendCmdParams->irDriveRegs = ideRegs;
-                    BYTE* smartThresholds = NULL;
-
-                    if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 512)
-                    {
-                        // This math comes from the SMART Thresholds being in the last 512 bytes. Don't care about the rest.
-                        smartThresholds = b + (bytesReturned - READ_THRESHOLD_BUFFER_SIZE);
-                    }
-
-                    std::string SMARTData = smartToString((BYTE*)storagePredictFailure.VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, smartThresholds);
-
-                    // SMART Return Status (should say if a threshold exceeded condition)
-                    memset(&b, 0, sizeof(b));
-                    smartSendCmdParams->cBufferSize = sizeof(b);
-                    ideRegs.bFeaturesReg = RETURN_SMART_STATUS;
-                    ideRegs.bCylLowReg = SMART_CYL_LOW;
-                    ideRegs.bCylHighReg = SMART_CYL_HI;
-                    ideRegs.bCommandReg = SMART_CMD;
-                    smartSendCmdParams->irDriveRegs = ideRegs;
-                    if (DeviceIoControl(handle, SMART_SEND_DRIVE_COMMAND, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
-                    {
-                        std::string SMARTReturnStatus = "Healthy";
-                        if (ideRegs.bCylLowReg == BAD_SMART_LOW && ideRegs.bCylHighReg == BAD_SMART_HIGH)
-                        {
-                            SMARTReturnStatus = "Threshold Exceeded Condition";
-                        }
-                        addToMap(devAttrMap, SMARTReturnStatus);
-                    }
-
-                    addToMap(devAttrMap, SMARTData);
-                }
-
-                DISK_GEOMETRY_EX diskGeoEx = { 0 };
-                if (DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, NULL, &diskGeoEx, sizeof(DISK_GEOMETRY_EX), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string DiskSize = std::to_string(diskGeoEx.DiskSize.QuadPart) + " Bytes" + " (" + std::to_string(diskGeoEx.DiskSize.QuadPart / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
-                    addToMap(devAttrMap, DiskSize);
-                }
-
-                USB_HUB_CAPABILITIES_EX usbHubCapabilities = { 0 };
-                if (DeviceIoControl(handle, IOCTL_USB_GET_HUB_CAPABILITIES_EX, NULL, NULL, &usbHubCapabilities, sizeof(USB_HUB_CAPABILITIES_EX), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string HubIsHighSpeedCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeedCapable);
-                    addToMap(devAttrMap, HubIsHighSpeedCapable);
-
-                    std::string HubIsHighSpeed = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeed);
-                    addToMap(devAttrMap, HubIsHighSpeed);
-
-                    std::string HubIsMultiTransactionCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTtCapable);
-                    addToMap(devAttrMap, HubIsMultiTransactionCapable);
-
-                    std::string HubIsMultiTransaction = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTt);
-                    addToMap(devAttrMap, HubIsMultiTransaction);
-
-                    std::string HubIsRoot = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsRoot);
-                    addToMap(devAttrMap, HubIsRoot);
-
-                    std::string HubIsArmedWakeOnConnect = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsArmedWakeOnConnect);
-                    addToMap(devAttrMap, HubIsArmedWakeOnConnect);
-
-                    std::string HubIsBusPowered = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsBusPowered);
-                    addToMap(devAttrMap, HubIsBusPowered);
-                }
-
-                USB_NODE_INFORMATION usbNodeInfo;
-                memset(&usbNodeInfo, 0, sizeof(USB_NODE_INFORMATION));
-                // MSDN says to pass the USB_NODE_INFORMATION as input as well and set NodeType... I don't think it does anything on input... Also requesting more than 6 because it seems to pass with invalid data at 6.
-                if (DeviceIoControl(handle, IOCTL_USB_GET_NODE_INFORMATION, &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &bytesReturned, NULL) && bytesReturned > 6)
-                {
-                    if (usbNodeInfo.NodeType == UsbMIParent)
-                    {
-                        std::string ParentUSBNodeType = "UsbMiParent";
-                        addToMap(devAttrMap, ParentUSBNodeType);
-
-                        std::string ParentNumberOfInterfaces = std::to_string(usbNodeInfo.u.MiParentInformation.NumberOfInterfaces);
-                        addToMap(devAttrMap, ParentNumberOfInterfaces);
-                    }
-                    else if (usbNodeInfo.NodeType == UsbHub)
-                    {
-                        std::string ParentUSBNodeType = "UsbHub";
-                        addToMap(devAttrMap, ParentUSBNodeType);
-
-                        std::string ParentNumberOfHubPorts = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bNumberOfPorts);
-                        addToMap(devAttrMap, ParentNumberOfHubPorts);
-
-                        // Apparently there is more info on this in the USB spec... possible todo: decode it.
-                        std::string ParentHubCharacteristics = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.wHubCharacteristics);
-                        addToMap(devAttrMap, ParentHubCharacteristics);
-
-                        // Number is in 2-ms intervals
-                        std::string ParentHubTimeToPowerOn = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bPowerOnToPowerGood * 2) + " Milliseconds";
-                        addToMap(devAttrMap, ParentHubTimeToPowerOn);
-
-                        // Number is in milliamperes
-                        std::string ParentHubMaxCurrent = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes";
-                        addToMap(devAttrMap, ParentHubMaxCurrent);
-
-                        std::string ParentIsBusPowered = toBoolString(usbNodeInfo.u.HubInformation.HubIsBusPowered);
-                        addToMap(devAttrMap, ParentIsBusPowered);
-                    }
-                }
-
-                memset(&b, 0, sizeof(b));
-                PUSB_ROOT_HUB_NAME usbRootHubName = (PUSB_ROOT_HUB_NAME)b;
-                if (DeviceIoControl(handle, IOCTL_USB_GET_ROOT_HUB_NAME, NULL, NULL, usbRootHubName, 1024, &bytesReturned, NULL) && bytesReturned > 0 && usbRootHubName->ActualLength > 0)
-                {
-                    std::string RootHubName = wStringToString(std::wstring((wchar_t*)usbRootHubName->RootHubName));
-                    addToMap(devAttrMap, RootHubName);
-                }
-
-                memset(&b, 0, sizeof(b));
-                PVOLUME_DISK_EXTENTS volumeDiskExtents = (PVOLUME_DISK_EXTENTS)b;
-                if (DeviceIoControl(handle, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    std::string NumberOfDiskExtents = std::to_string(volumeDiskExtents->NumberOfDiskExtents);
-                    addToMap(devAttrMap, NumberOfDiskExtents);
-
-                    DISK_EXTENT * thisExtent = volumeDiskExtents->Extents;
-                    for (size_t i = 0; i < volumeDiskExtents->NumberOfDiskExtents; i++)
-                    {
-                        std::string DiskExtent = "Disk Number: " + std::to_string(thisExtent->DiskNumber) + "\n";
-                        DiskExtent += "Starting Offset: Byte " + std::to_string(thisExtent->StartingOffset.QuadPart) + "\n";
-                        DiskExtent += "Extent Length: " + std::to_string(thisExtent->ExtentLength.QuadPart) + " Bytes";
-                        devAttrMap["DiskExtent" + std::to_string(i)] = DiskExtent;
-
-                        // Should do pointer math and move to the next extent
-                        thisExtent++;
-                    }
-                }
-
-                if (DeviceIoControl(handle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    PNTFS_VOLUME_DATA_BUFFER p = (PNTFS_VOLUME_DATA_BUFFER)b;
-
-                    std::string VolumeSerialNumber = std::to_string(p->VolumeSerialNumber.QuadPart);
-                    addToMap(devAttrMap, VolumeSerialNumber);
-
-                    std::string NumberSectors = std::to_string(p->NumberSectors.QuadPart);
-                    addToMap(devAttrMap, NumberSectors);
-
-                    std::string TotalClusters = std::to_string(p->TotalClusters.QuadPart);
-                    addToMap(devAttrMap, TotalClusters);
-
-                    std::string FreeClusters = std::to_string(p->FreeClusters.QuadPart);
-                    addToMap(devAttrMap, FreeClusters);
-
-                    std::string TotalReserved = std::to_string(p->TotalReserved.QuadPart);
-                    addToMap(devAttrMap, TotalReserved);
-
-                    std::string BytesPerSector = std::to_string(p->BytesPerSector);
-                    addToMap(devAttrMap, BytesPerSector);
-
-                    std::string BytesPerCluster = std::to_string(p->BytesPerCluster);
-                    addToMap(devAttrMap, BytesPerCluster);
-
-                    std::string BytesPerFileRecordSegment = std::to_string(p->BytesPerFileRecordSegment);
-                    addToMap(devAttrMap, BytesPerFileRecordSegment);
-
-                    std::string ClustersPerFileRecordSegment = std::to_string(p->ClustersPerFileRecordSegment);
-                    addToMap(devAttrMap, ClustersPerFileRecordSegment);
-
-                    std::string MftValidDataLength = std::to_string(p->MftValidDataLength.QuadPart);
-                    addToMap(devAttrMap, MftValidDataLength);
-
-                    std::string MftStartLcn = std::to_string(p->MftStartLcn.QuadPart);
-                    addToMap(devAttrMap, MftStartLcn);
-
-                    std::string Mft2StartLcn = std::to_string(p->Mft2StartLcn.QuadPart);
-                    addToMap(devAttrMap, Mft2StartLcn);
-
-                    std::string MftZoneStart = std::to_string(p->MftZoneStart.QuadPart);
-                    addToMap(devAttrMap, MftZoneStart);
-
-                    std::string MftZoneEnd = std::to_string(p->MftZoneEnd.QuadPart);
-                    addToMap(devAttrMap, MftZoneEnd);
-                }
-
-                if (DeviceIoControl(handle, IOCTL_VOLUME_GET_GPT_ATTRIBUTES, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION p = (PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION)b;
-
-                    std::string GPTAttributes = gptAttributesToString(p->GptAttributes);
-                    addToMap(devAttrMap, GPTAttributes);
-                }
-
-                if (DeviceIoControl(handle, IOCTL_SERIAL_GET_COMMSTATUS, NULL, 0, b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    PULONG baud = (PULONG)b;
-                    std::string BaudRate = std::to_string(*baud);
-                    addToMap(devAttrMap, BaudRate);
-                }
-
-                memset(&b, 0, sizeof(b));
-                DWORD volumeSerialNumber = 0;
-                DWORD maximumComponentLength = 0;
-                DWORD fileSystemFlags = 0;
-                wchar_t fileSystemNameBuffer[4096] = { '\0' };
-                if (GetVolumeInformationByHandleW(handle, (LPWSTR)b, sizeof(b), &volumeSerialNumber, &maximumComponentLength, &fileSystemFlags, fileSystemNameBuffer, 4096))
-                {
-                    std::string VolumeInformation = wStringToString(std::wstring((wchar_t*)b));
-                    addToMap(devAttrMap, VolumeInformation);
-
-                    std::string VolumeSerialNumber = std::to_string(volumeSerialNumber);
-                    addToMap(devAttrMap, VolumeSerialNumber);
-
-                    std::string MaximumComponentLength = std::to_string(maximumComponentLength);
-                    addToMap(devAttrMap, MaximumComponentLength);
-
-                    std::string FileSystemFlags = fileSystemFlagToString(fileSystemFlags);
-                    addToMap(devAttrMap, FileSystemFlags);
-
-                    std::string FileSystemName = wStringToString(std::wstring(fileSystemNameBuffer));
-                    addToMap(devAttrMap, FileSystemName);
-                }
-
-                CloseHandle(handle);
-            }
+            addToMap(devAttrMap, InterfaceClassGuid);
 
             interfaces.push_back(devAttrMap);
 
@@ -1562,6 +1098,490 @@ AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap)
     }
 
     return oldAMap;
+}
+
+AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std::string, std::string> &msDosDeviceNameToDriveLetterMap)
+{
+    AttributeMap devAttrMap;
+    devAttrMap["DevicePath"] = DevicePath;
+
+    char targetPaths[4096];
+    // substr(4) to get rid of the \\.\ 
+    DWORD targetPathsLength = QueryDosDevice(DevicePath.substr(4).c_str(), targetPaths, 4096);
+    if (targetPathsLength != 0)
+    {
+        std::string MSDosDeviceName = std::string(targetPaths, targetPathsLength);
+        MSDosDeviceName = delimitedStringToNewlineString(MSDosDeviceName);
+        addToMap(devAttrMap, MSDosDeviceName);
+
+        // Map to drive letter... not quite sure what would happen if a volume spans multple MSDosDevices...
+        if (msDosDeviceNameToDriveLetterMap.find(MSDosDeviceName) != msDosDeviceNameToDriveLetterMap.end())
+        {
+            std::string DriveLetter = msDosDeviceNameToDriveLetterMap[MSDosDeviceName];
+            addToMap(devAttrMap, DriveLetter);
+
+            std::string driveLetterWithBackslash = DriveLetter + "\\";
+            memset(&targetPaths, '\0', sizeof(targetPaths));
+
+            // Volume information
+            if (GetVolumeNameForVolumeMountPoint(driveLetterWithBackslash.c_str(), targetPaths, sizeof(targetPaths)))
+            {
+                std::string VolumeName = targetPaths;
+                addToMap(devAttrMap, VolumeName);
+            }
+        }
+    }
+
+    addInterfaceConfigurationAndResources(devAttrMap);
+
+    // See if we can find a PHYSICALDRIVE path
+    HANDLE handle = CreateFile(DevicePath.c_str(),
+        GENERIC_WRITE | GENERIC_READ,
+        (FILE_SHARE_READ | FILE_SHARE_WRITE),
+        NULL,
+        OPEN_EXISTING,
+        NULL,
+        NULL);
+
+    if (handle != INVALID_HANDLE_VALUE)
+    {
+        DWORD bytesReturned;
+        STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
+        {
+            std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
+            addToMap(devAttrMap, PhysicalDrivePath);
+
+            // substr(4) to get rid of the \\.\ 
+            DWORD targetPathsLength = QueryDosDevice(PhysicalDrivePath.substr(4).c_str(), targetPaths, 4096);
+            if (targetPathsLength != 0)
+            {
+                std::string MSDosPhysicalDriveDeviceName = std::string(targetPaths, targetPathsLength);
+                MSDosPhysicalDriveDeviceName = delimitedStringToNewlineString(MSDosPhysicalDriveDeviceName);
+                addToMap(devAttrMap, MSDosPhysicalDriveDeviceName);
+            }
+
+            std::string PartitionNumber;
+            if (storageDeviceNumber.PartitionNumber == (DWORD)-1)
+            {
+                PartitionNumber = "<Device Cannot Be Partitioned>";
+            }
+            else
+            {
+                PartitionNumber = std::to_string(storageDeviceNumber.PartitionNumber);
+            }
+            addToMap(devAttrMap, PartitionNumber);
+
+            std::string DeviceType = std::to_string(storageDeviceNumber.DeviceType);
+            addToMap(devAttrMap, DeviceType);
+        }
+
+        SCSI_ADDRESS scsiAddress = { 0 };
+        if (DeviceIoControl(handle, IOCTL_SCSI_GET_ADDRESS, NULL, 0, &scsiAddress, sizeof(SCSI_ADDRESS), &bytesReturned, NULL))
+        {
+            if (scsiAddress.Length == sizeof(SCSI_ADDRESS))
+            {
+                std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiAddress.PortNumber) + ":";
+                addToMap(devAttrMap, ScsiAdapterPath);
+
+                // substr(4) to get rid of the \\.\ 
+                DWORD targetPathsLength = QueryDosDevice(ScsiAdapterPath.substr(4).c_str(), targetPaths, 4096);
+                if (targetPathsLength != 0)
+                {
+                    std::string MSDosAdapterName = std::string(targetPaths, targetPathsLength);
+                    MSDosAdapterName = delimitedStringToNewlineString(MSDosAdapterName);
+                    addToMap(devAttrMap, MSDosAdapterName);
+                }
+
+                std::string ScsiPathId = std::to_string(scsiAddress.PathId);
+                addToMap(devAttrMap, ScsiPathId);
+
+                std::string ScsiLun = std::to_string(scsiAddress.Lun);
+                addToMap(devAttrMap, ScsiLun);
+
+                std::string ScsiTargetId = std::to_string(scsiAddress.TargetId);
+                addToMap(devAttrMap, ScsiTargetId);
+
+                std::string ScsiPortNumber = std::to_string(scsiAddress.PortNumber);
+                addToMap(devAttrMap, ScsiPortNumber);
+
+                // Get IO_SCSI_CAPABILITIES
+                IO_SCSI_CAPABILITIES ioScsiCapabilities = { 0 };
+                if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, &ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL))
+                {
+                    std::string MaximumTransferLength = std::to_string(ioScsiCapabilities.MaximumTransferLength);
+                    addToMap(devAttrMap, MaximumTransferLength);
+
+                    std::string MaximumPhysicalPages = std::to_string(ioScsiCapabilities.MaximumPhysicalPages);
+                    addToMap(devAttrMap, MaximumPhysicalPages);
+
+                    std::string SupportedAsynchronousEvents = toBoolString(ioScsiCapabilities.SupportedAsynchronousEvents);
+                    addToMap(devAttrMap, SupportedAsynchronousEvents);
+
+                    std::string AlignmentMask = std::to_string(ioScsiCapabilities.AlignmentMask);
+                    addToMap(devAttrMap, AlignmentMask);
+
+                    std::string TaggedQueuing = toBoolString(ioScsiCapabilities.TaggedQueuing);
+                    addToMap(devAttrMap, TaggedQueuing);
+
+                    std::string AdapterScansDown = toBoolString(ioScsiCapabilities.AdapterScansDown);
+                    addToMap(devAttrMap, AdapterScansDown);
+
+                    std::string AdapterUsesPio = toBoolString(ioScsiCapabilities.AdapterUsesPio);
+                    addToMap(devAttrMap, AdapterUsesPio);
+                }
+            }
+        }
+
+        // Get hotplug info
+        STORAGE_HOTPLUG_INFO storageHotplugInfo = { 0 };
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL) && bytesReturned != 0)
+        {
+            std::string MediaRemovable = toBoolString(storageHotplugInfo.MediaRemovable);
+            addToMap(devAttrMap, MediaRemovable);
+
+            std::string MediaHotplug = toBoolString(storageHotplugInfo.MediaHotplug);
+            addToMap(devAttrMap, MediaHotplug);
+
+            std::string DeviceHotplug = toBoolString(storageHotplugInfo.DeviceHotplug);
+            addToMap(devAttrMap, DeviceHotplug);
+        }
+
+        // Get media serial number
+        MEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = { 0 };
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(MEDIA_SERIAL_NUMBER_DATA), &bytesReturned, NULL) && bytesReturned != 0)
+        {
+            std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData.SerialNumberData, mediaSerialNumberData.SerialNumberLength);
+            addToMap(devAttrMap, MediaSerialNumber);
+        }
+
+        // Get media serial number
+        STORAGE_READ_CAPACITY storageReadCapacity = { 0 };
+        if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL) && bytesReturned != 0)
+        {
+            std::string BlockLength = std::to_string(storageReadCapacity.BlockLength);
+            addToMap(devAttrMap, BlockLength);
+
+            std::string NumberOfBlocks = std::to_string(storageReadCapacity.NumberOfBlocks.QuadPart);
+            addToMap(devAttrMap, NumberOfBlocks);
+
+            std::string DiskLength = std::to_string(storageReadCapacity.DiskLength.QuadPart);
+            addToMap(devAttrMap, DiskLength);
+        }
+
+        // Get storage unique identifier
+        BYTE b[4096] = { 0 };
+        PSTORAGE_DEVICE_UNIQUE_IDENTIFIER pStorageDeviceUniqueIdentifer = (PSTORAGE_DEVICE_UNIQUE_IDENTIFIER)b;
+        STORAGE_PROPERTY_QUERY storagePropertyQuery;
+        memset(&storagePropertyQuery, 0, sizeof(STORAGE_PROPERTY_QUERY));
+        storagePropertyQuery.PropertyId = StorageDeviceUniqueIdProperty;
+        storagePropertyQuery.QueryType = PropertyStandardQuery;
+        if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL) && bytesReturned != 0)
+        {
+            PSTORAGE_DEVICE_ID_DESCRIPTOR pStorageDeviceIdDescriptor = (PSTORAGE_DEVICE_ID_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceIdOffset);
+
+            PSTORAGE_DEVICE_DESCRIPTOR pStorageDeviceDescriptor = (PSTORAGE_DEVICE_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceOffset);
+
+            std::string CommandQueueing = toBoolString(pStorageDeviceDescriptor->CommandQueueing);
+            addToMap(devAttrMap, CommandQueueing);
+
+            if (pStorageDeviceDescriptor->VendorIdOffset != 0)
+            {
+                std::string VendorId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->VendorIdOffset));
+                addToMap(devAttrMap, VendorId);
+            }
+
+            if (pStorageDeviceDescriptor->ProductIdOffset != 0)
+            {
+                std::string ProductId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductIdOffset));
+                addToMap(devAttrMap, ProductId);
+            }
+
+            if (pStorageDeviceDescriptor->ProductRevisionOffset != 0)
+            {
+                std::string ProductRevision = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductRevisionOffset));
+                addToMap(devAttrMap, ProductRevision);
+            }
+
+            if (pStorageDeviceDescriptor->SerialNumberOffset != 0)
+            {
+                std::string SerialNumber = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->SerialNumberOffset + 1));
+                addToMap(devAttrMap, SerialNumber);
+            }
+
+            std::string BusType = storageBusTypeToString(pStorageDeviceDescriptor->BusType);
+            addToMap(devAttrMap, BusType);
+
+            PSTORAGE_DEVICE_LAYOUT_SIGNATURE pStorageDeviceLayoutSignature = (PSTORAGE_DEVICE_LAYOUT_SIGNATURE)(b + pStorageDeviceUniqueIdentifer->DriveLayoutSignatureOffset);
+            // If MBR give that info, otherwise give GPT GUID
+            if (pStorageDeviceLayoutSignature->Mbr)
+            {
+                std::string MbrSignature = std::to_string(pStorageDeviceLayoutSignature->DeviceSpecific.MbrSignature);
+                addToMap(devAttrMap, MbrSignature)
+            }
+            else
+            {
+                std::string GptDiskId = guidToString(pStorageDeviceLayoutSignature->DeviceSpecific.GptDiskId);
+                addToMap(devAttrMap, GptDiskId);
+            }
+
+            // Everything together... useful because a user can use CompareStorageDuids(...) to check for exact/sub matches
+            std::string StorageDUID = byteArrayToString(b, bytesReturned);
+            addToMap(devAttrMap, StorageDUID);
+        }
+
+        if (DeviceIoControl(handle, IOCTL_HID_GET_MANUFACTURER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string Manufacturer = wStringToString((wchar_t*)b);
+            addToMap(devAttrMap, Manufacturer);
+        }
+
+        if (DeviceIoControl(handle, IOCTL_HID_GET_PRODUCT_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string ProductId = wStringToString((wchar_t*)b);
+            addToMap(devAttrMap, ProductId);
+        }
+
+        if (DeviceIoControl(handle, IOCTL_HID_GET_SERIALNUMBER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string SerialNumber = wStringToString((wchar_t*)b);
+            addToMap(devAttrMap, SerialNumber);
+        }
+
+        STORAGE_PREDICT_FAILURE storagePredictFailure = { 0 };
+        if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, &storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string PredictFailure = toBoolString(storagePredictFailure.PredictFailure);
+            addToMap(devAttrMap, PredictFailure);
+
+            // Get SMART Thresholds
+            memset(&b, 0, sizeof(b));
+            PSENDCMDINPARAMS smartSendCmdParams = (PSENDCMDINPARAMS)b;
+            smartSendCmdParams->cBufferSize = sizeof(b);
+            IDEREGS ideRegs = { 0 };
+            ideRegs.bFeaturesReg = READ_THRESHOLDS;
+            ideRegs.bCylLowReg = SMART_CYL_LOW;
+            ideRegs.bCylHighReg = SMART_CYL_HI;
+            ideRegs.bCommandReg = SMART_CMD;
+            smartSendCmdParams->irDriveRegs = ideRegs;
+            BYTE* smartThresholds = NULL;
+
+            if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 512)
+            {
+                // This math comes from the SMART Thresholds being in the last 512 bytes. Don't care about the rest.
+                smartThresholds = b + (bytesReturned - READ_THRESHOLD_BUFFER_SIZE);
+            }
+
+            std::string SMARTData = smartToString((BYTE*)storagePredictFailure.VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, smartThresholds);
+
+            // SMART Return Status (should say if a threshold exceeded condition)
+            memset(&b, 0, sizeof(b));
+            smartSendCmdParams->cBufferSize = sizeof(b);
+            ideRegs.bFeaturesReg = RETURN_SMART_STATUS;
+            ideRegs.bCylLowReg = SMART_CYL_LOW;
+            ideRegs.bCylHighReg = SMART_CYL_HI;
+            ideRegs.bCommandReg = SMART_CMD;
+            smartSendCmdParams->irDriveRegs = ideRegs;
+            if (DeviceIoControl(handle, SMART_SEND_DRIVE_COMMAND, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+            {
+                std::string SMARTReturnStatus = "Healthy";
+                if (ideRegs.bCylLowReg == BAD_SMART_LOW && ideRegs.bCylHighReg == BAD_SMART_HIGH)
+                {
+                    SMARTReturnStatus = "Threshold Exceeded Condition";
+                }
+                addToMap(devAttrMap, SMARTReturnStatus);
+            }
+
+            addToMap(devAttrMap, SMARTData);
+        }
+
+        DISK_GEOMETRY_EX diskGeoEx = { 0 };
+        if (DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, NULL, &diskGeoEx, sizeof(DISK_GEOMETRY_EX), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string DiskSize = std::to_string(diskGeoEx.DiskSize.QuadPart) + " Bytes" + " (" + std::to_string(diskGeoEx.DiskSize.QuadPart / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
+            addToMap(devAttrMap, DiskSize);
+        }
+
+        USB_HUB_CAPABILITIES_EX usbHubCapabilities = { 0 };
+        if (DeviceIoControl(handle, IOCTL_USB_GET_HUB_CAPABILITIES_EX, NULL, NULL, &usbHubCapabilities, sizeof(USB_HUB_CAPABILITIES_EX), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string HubIsHighSpeedCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeedCapable);
+            addToMap(devAttrMap, HubIsHighSpeedCapable);
+
+            std::string HubIsHighSpeed = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeed);
+            addToMap(devAttrMap, HubIsHighSpeed);
+
+            std::string HubIsMultiTransactionCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTtCapable);
+            addToMap(devAttrMap, HubIsMultiTransactionCapable);
+
+            std::string HubIsMultiTransaction = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTt);
+            addToMap(devAttrMap, HubIsMultiTransaction);
+
+            std::string HubIsRoot = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsRoot);
+            addToMap(devAttrMap, HubIsRoot);
+
+            std::string HubIsArmedWakeOnConnect = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsArmedWakeOnConnect);
+            addToMap(devAttrMap, HubIsArmedWakeOnConnect);
+
+            std::string HubIsBusPowered = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsBusPowered);
+            addToMap(devAttrMap, HubIsBusPowered);
+        }
+
+        USB_NODE_INFORMATION usbNodeInfo;
+        memset(&usbNodeInfo, 0, sizeof(USB_NODE_INFORMATION));
+        // MSDN says to pass the USB_NODE_INFORMATION as input as well and set NodeType... I don't think it does anything on input... Also requesting more than 6 because it seems to pass with invalid data at 6.
+        if (DeviceIoControl(handle, IOCTL_USB_GET_NODE_INFORMATION, &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &bytesReturned, NULL) && bytesReturned > 6)
+        {
+            if (usbNodeInfo.NodeType == UsbMIParent)
+            {
+                std::string ParentUSBNodeType = "UsbMiParent";
+                addToMap(devAttrMap, ParentUSBNodeType);
+
+                std::string ParentNumberOfInterfaces = std::to_string(usbNodeInfo.u.MiParentInformation.NumberOfInterfaces);
+                addToMap(devAttrMap, ParentNumberOfInterfaces);
+            }
+            else if (usbNodeInfo.NodeType == UsbHub)
+            {
+                std::string ParentUSBNodeType = "UsbHub";
+                addToMap(devAttrMap, ParentUSBNodeType);
+
+                std::string ParentNumberOfHubPorts = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bNumberOfPorts);
+                addToMap(devAttrMap, ParentNumberOfHubPorts);
+
+                // Apparently there is more info on this in the USB spec... possible todo: decode it.
+                std::string ParentHubCharacteristics = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.wHubCharacteristics);
+                addToMap(devAttrMap, ParentHubCharacteristics);
+
+                // Number is in 2-ms intervals
+                std::string ParentHubTimeToPowerOn = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bPowerOnToPowerGood * 2) + " Milliseconds";
+                addToMap(devAttrMap, ParentHubTimeToPowerOn);
+
+                // Number is in milliamperes
+                std::string ParentHubMaxCurrent = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes";
+                addToMap(devAttrMap, ParentHubMaxCurrent);
+
+                std::string ParentIsBusPowered = toBoolString(usbNodeInfo.u.HubInformation.HubIsBusPowered);
+                addToMap(devAttrMap, ParentIsBusPowered);
+            }
+        }
+
+        memset(&b, 0, sizeof(b));
+        PUSB_ROOT_HUB_NAME usbRootHubName = (PUSB_ROOT_HUB_NAME)b;
+        if (DeviceIoControl(handle, IOCTL_USB_GET_ROOT_HUB_NAME, NULL, NULL, usbRootHubName, 1024, &bytesReturned, NULL) && bytesReturned > 0 && usbRootHubName->ActualLength > 0)
+        {
+            std::string RootHubName = wStringToString(std::wstring((wchar_t*)usbRootHubName->RootHubName));
+            addToMap(devAttrMap, RootHubName);
+        }
+
+        memset(&b, 0, sizeof(b));
+        PVOLUME_DISK_EXTENTS volumeDiskExtents = (PVOLUME_DISK_EXTENTS)b;
+        if (DeviceIoControl(handle, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            std::string NumberOfDiskExtents = std::to_string(volumeDiskExtents->NumberOfDiskExtents);
+            addToMap(devAttrMap, NumberOfDiskExtents);
+
+            DISK_EXTENT * thisExtent = volumeDiskExtents->Extents;
+            for (size_t i = 0; i < volumeDiskExtents->NumberOfDiskExtents; i++)
+            {
+                std::string DiskExtent = "Disk Number: " + std::to_string(thisExtent->DiskNumber) + "\n";
+                DiskExtent += "Starting Offset: Byte " + std::to_string(thisExtent->StartingOffset.QuadPart) + "\n";
+                DiskExtent += "Extent Length: " + std::to_string(thisExtent->ExtentLength.QuadPart) + " Bytes";
+                devAttrMap["DiskExtent" + std::to_string(i)] = DiskExtent;
+
+                // Should do pointer math and move to the next extent
+                thisExtent++;
+            }
+        }
+
+        if (DeviceIoControl(handle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            PNTFS_VOLUME_DATA_BUFFER p = (PNTFS_VOLUME_DATA_BUFFER)b;
+
+            std::string VolumeSerialNumber = std::to_string(p->VolumeSerialNumber.QuadPart);
+            addToMap(devAttrMap, VolumeSerialNumber);
+
+            std::string NumberSectors = std::to_string(p->NumberSectors.QuadPart);
+            addToMap(devAttrMap, NumberSectors);
+
+            std::string TotalClusters = std::to_string(p->TotalClusters.QuadPart);
+            addToMap(devAttrMap, TotalClusters);
+
+            std::string FreeClusters = std::to_string(p->FreeClusters.QuadPart);
+            addToMap(devAttrMap, FreeClusters);
+
+            std::string TotalReserved = std::to_string(p->TotalReserved.QuadPart);
+            addToMap(devAttrMap, TotalReserved);
+
+            std::string BytesPerSector = std::to_string(p->BytesPerSector);
+            addToMap(devAttrMap, BytesPerSector);
+
+            std::string BytesPerCluster = std::to_string(p->BytesPerCluster);
+            addToMap(devAttrMap, BytesPerCluster);
+
+            std::string BytesPerFileRecordSegment = std::to_string(p->BytesPerFileRecordSegment);
+            addToMap(devAttrMap, BytesPerFileRecordSegment);
+
+            std::string ClustersPerFileRecordSegment = std::to_string(p->ClustersPerFileRecordSegment);
+            addToMap(devAttrMap, ClustersPerFileRecordSegment);
+
+            std::string MftValidDataLength = std::to_string(p->MftValidDataLength.QuadPart);
+            addToMap(devAttrMap, MftValidDataLength);
+
+            std::string MftStartLcn = std::to_string(p->MftStartLcn.QuadPart);
+            addToMap(devAttrMap, MftStartLcn);
+
+            std::string Mft2StartLcn = std::to_string(p->Mft2StartLcn.QuadPart);
+            addToMap(devAttrMap, Mft2StartLcn);
+
+            std::string MftZoneStart = std::to_string(p->MftZoneStart.QuadPart);
+            addToMap(devAttrMap, MftZoneStart);
+
+            std::string MftZoneEnd = std::to_string(p->MftZoneEnd.QuadPart);
+            addToMap(devAttrMap, MftZoneEnd);
+        }
+
+        if (DeviceIoControl(handle, IOCTL_VOLUME_GET_GPT_ATTRIBUTES, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION p = (PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION)b;
+
+            std::string GPTAttributes = gptAttributesToString(p->GptAttributes);
+            addToMap(devAttrMap, GPTAttributes);
+        }
+
+        if (DeviceIoControl(handle, IOCTL_SERIAL_GET_COMMSTATUS, NULL, 0, b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            PULONG baud = (PULONG)b;
+            std::string BaudRate = std::to_string(*baud);
+            addToMap(devAttrMap, BaudRate);
+        }
+
+        memset(&b, 0, sizeof(b));
+        DWORD volumeSerialNumber = 0;
+        DWORD maximumComponentLength = 0;
+        DWORD fileSystemFlags = 0;
+        wchar_t fileSystemNameBuffer[4096] = { '\0' };
+        if (GetVolumeInformationByHandleW(handle, (LPWSTR)b, sizeof(b), &volumeSerialNumber, &maximumComponentLength, &fileSystemFlags, fileSystemNameBuffer, 4096))
+        {
+            std::string VolumeInformation = wStringToString(std::wstring((wchar_t*)b));
+            addToMap(devAttrMap, VolumeInformation);
+
+            std::string VolumeSerialNumber = std::to_string(volumeSerialNumber);
+            addToMap(devAttrMap, VolumeSerialNumber);
+
+            std::string MaximumComponentLength = std::to_string(maximumComponentLength);
+            addToMap(devAttrMap, MaximumComponentLength);
+
+            std::string FileSystemFlags = fileSystemFlagToString(fileSystemFlags);
+            addToMap(devAttrMap, FileSystemFlags);
+
+            std::string FileSystemName = wStringToString(std::wstring(fileSystemNameBuffer));
+            addToMap(devAttrMap, FileSystemName);
+        }
+
+        CloseHandle(handle);
+    }
+
+    return devAttrMap;
 }
 
 std::map<std::string, std::string> getMsDosDeviceNameToDriveLetterMap()
