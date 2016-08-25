@@ -63,6 +63,9 @@ typedef struct _MEDIA_SERIAL_NUMBER_DATA {
 //   name of attribute -> string of attribute value
 typedef std::map<std::string, std::string> AttributeMap;
 
+// Used to map a DeviceId to a SCSI Port
+typedef std::map<std::string, UINT16> DeviceIdToScsiPortMap;
+
 // For SMART parsing
 #define BAD_SMART_LOW   0xF4
 #define BAD_SMART_HIGH  0x2C
@@ -107,7 +110,7 @@ std::string getDeviceId(DEVINST &devInst);
 
 // Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
 //   this is a collection of 'attributes'
-AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap);
+AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, DeviceIdToScsiPortMap &deviceIdToScsiPortMap);
 
 // Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap
 void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST devInst);
@@ -133,8 +136,8 @@ AttributeMap getAttributeMapWith(std::string key, std::string value);
 // Gets a DEVINST that has a matching key and value in it's AttributeMap
 DEVINST getDevInstWith(std::string key, std::string value);
 
-// Gets a mapping from SCSI port to device id
-std::map<int, std::string> getScsiPortToDeviceIdMap();
+// Gets a mapping from Device Id to SCSI Port
+DeviceIdToScsiPortMap getDeviceIdToScsiPortMap();
 
 // Merges two AttributeMaps. If anything differs adds on a new line
 AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap);

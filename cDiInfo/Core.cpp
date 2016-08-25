@@ -269,7 +269,7 @@ std::string getDeviceId(DEVINST &devInst)
     return UNAVAILABLE_ATTRIBUTE;
 }
 
-AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::map<int, std::string> &scsiPortToDeviceIdMap)
+AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, DeviceIdToScsiPortMap &deviceIdToScsiPortMap)
 {
     AttributeMap devAttrMap;
 
@@ -445,17 +445,14 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, std::
         addToMap(devAttrMap, DriverType);
     }
 
-    // Try to get SCSI port info (this loop is only for getting the SCSI adapter/port for the controller itself, it's disks already have it)
-    for (auto &scsiPortToDeviceId : scsiPortToDeviceIdMap)
+    // Try to get SCSI port info (This is for interface-less devices... it's disks already have interfaces with device paths that can get SCSI info)
+    auto itr = deviceIdToScsiPortMap.find(DeviceId);
+    if (itr != deviceIdToScsiPortMap.end())
     {
-        if (toUpper(scsiPortToDeviceId.second) == toUpper(DeviceId))
-        {
-            std::string ScsiPortNumber = std::to_string(scsiPortToDeviceId.first);
-            std::string ScsiAdapterPath = "\\\\.\\SCSI" + ScsiPortNumber + ":";
-            addToMap(devAttrMap, ScsiAdapterPath);
-            addToMap(devAttrMap, ScsiPortNumber);
-            break;
-        }
+        std::string ScsiPortNumber = std::to_string(itr->second);
+        std::string ScsiAdapterPath = "\\\\.\\SCSI" + ScsiPortNumber + ":";
+        addToMap(devAttrMap, ScsiAdapterPath);
+        addToMap(devAttrMap, ScsiPortNumber);
     }
 
     // Try to save the SP_DEVINFO_DATA... a bit sketchy but works!
@@ -799,7 +796,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
     }
 
     HDEVINFO interfaceDevs = getInterfaceHDevInfo(classGuid);
-    std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
+    DeviceIdToScsiPortMap deviceIdToScsiPortMap = getDeviceIdToScsiPortMap();
     std::map<std::string, std::string> msDosDeviceNameToDriveLetterMap = getMsDosDeviceNameToDriveLetterMap();
 
     if (interfaceDevs == INVALID_HANDLE_VALUE)
@@ -859,7 +856,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 #ifdef MULTITHREADED
             std::future<AttributeMap> futureDevAttrMap = std::async(getDeviceAttributeMap, interfaceDevs, devInfo, ref(scsiPortToDeviceIdMap));
 #else // SINGLETHREADED
-            devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, scsiPortToDeviceIdMap);
+            devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, deviceIdToScsiPortMap);
 #endif // SINGLETHREADED
 
             AttributeMap otherAttrMap = getAttributeMapFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
@@ -905,7 +902,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
     std::future<std::vector<AttributeMap>> futureCompleteDevicesAttrMap;
     std::vector<AttributeMap> completeDevicesAttrMap;
 
-    std::map<int, std::string> scsiPortToDeviceIdMap = getScsiPortToDeviceIdMap();
+    DeviceIdToScsiPortMap deviceIdToScsiPortMap = getDeviceIdToScsiPortMap();
 
     if (deviceDevs == INVALID_HANDLE_VALUE)
     {
@@ -951,7 +948,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
 #ifdef MULTITHREADED
                 devAttrMapsToAdd.push_back(std::async(getDeviceAttributeMap, deviceDevs, dIAI.second, ref(scsiPortToDeviceIdMap)));
 #else // SINGLETHREADED
-                devAttrMapsToAdd.push_back(getDeviceAttributeMap(deviceDevs, dIAI.second, ref(scsiPortToDeviceIdMap)));
+                devAttrMapsToAdd.push_back(getDeviceAttributeMap(deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
 #endif // SINGLETHREADED
             }
         }
@@ -1031,11 +1028,11 @@ DEVINST getDevInstWith(std::string key, std::string value)
     return NULL;
 }
 
-std::map<int, std::string> getScsiPortToDeviceIdMap()
+DeviceIdToScsiPortMap getDeviceIdToScsiPortMap()
 {
-    std::map<int, std::string> scsiPortToDeviceIdMap;
+    DeviceIdToScsiPortMap deviceIdToScsiPort;
     std::map<int, std::string> scsiPortToDriver;
-    std::map < std::string, std::vector < std::string>> driverToDeviceIdsMap;
+    std::map <std::string, std::vector <std::string>> driverToDeviceIdsMap;
 
     int currentPort = 0;
     std::string currentDriver;
@@ -1064,12 +1061,12 @@ std::map<int, std::string> getScsiPortToDeviceIdMap()
         int port = i.first;
         std::string driver = i.second;
         auto &deviceIds = driverToDeviceIdsMap[driver];
-        scsiPortToDeviceIdMap[port] = deviceIds[0];
+        deviceIdToScsiPort[*deviceIds.rbegin()] = port;
 
-        deviceIds.erase(deviceIds.begin());
+        deviceIds.pop_back();
     }
 
-    return scsiPortToDeviceIdMap;
+    return deviceIdToScsiPort;
 }
 
 AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap)
