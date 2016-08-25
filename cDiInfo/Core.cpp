@@ -1145,6 +1145,7 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
 
     if (handle != INVALID_HANDLE_VALUE)
     {
+        BYTE b[4096] = { 0 };
         DWORD bytesReturned;
         STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
         if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
@@ -1248,10 +1249,10 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
         }
 
         // Get media serial number
-        MEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = { 0 };
-        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(MEDIA_SERIAL_NUMBER_DATA), &bytesReturned, NULL) && bytesReturned != 0)
+        PMEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = (PMEDIA_SERIAL_NUMBER_DATA)b;
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData.SerialNumberData, mediaSerialNumberData.SerialNumberLength);
+            std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData->SerialNumberData, mediaSerialNumberData->SerialNumberLength);
             addToMap(devAttrMap, MediaSerialNumber);
         }
 
@@ -1270,7 +1271,6 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
         }
 
         // Get storage unique identifier
-        BYTE b[4096] = { 0 };
         PSTORAGE_DEVICE_UNIQUE_IDENTIFIER pStorageDeviceUniqueIdentifer = (PSTORAGE_DEVICE_UNIQUE_IDENTIFIER)b;
         STORAGE_PROPERTY_QUERY storagePropertyQuery;
         memset(&storagePropertyQuery, 0, sizeof(STORAGE_PROPERTY_QUERY));
