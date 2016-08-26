@@ -9,6 +9,7 @@
 
 // STL Includes
 #include <exception>
+#include <string>
 
 // Local Includes
 #include "Attribute.h"
