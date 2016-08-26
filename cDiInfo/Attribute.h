@@ -8,9 +8,6 @@
 // WinApi Includes
 #include <Windows.h>
 
-// STL Includes
-#include <functional>
-
 namespace cdi
 {
     // A generic attribute with a customizeable toString mechanism
