@@ -854,7 +854,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
             std::string DevicePath = interfaceDetail->DevicePath;
 
 #ifdef MULTITHREADED
-            std::future<AttributeMap> futureDevAttrMap = std::async(getDeviceAttributeMap, interfaceDevs, devInfo, ref(scsiPortToDeviceIdMap));
+            std::future<AttributeMap> futureDevAttrMap = std::async(getDeviceAttributeMap, interfaceDevs, devInfo, ref(deviceIdToScsiPortMap));
 #else // SINGLETHREADED
             devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, deviceIdToScsiPortMap);
 #endif // SINGLETHREADED
@@ -946,7 +946,7 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
             if (needToAdd)
             {
 #ifdef MULTITHREADED
-                devAttrMapsToAdd.push_back(std::async(getDeviceAttributeMap, deviceDevs, dIAI.second, ref(scsiPortToDeviceIdMap)));
+                devAttrMapsToAdd.push_back(std::async(getDeviceAttributeMap, deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
 #else // SINGLETHREADED
                 devAttrMapsToAdd.push_back(getDeviceAttributeMap(deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
 #endif // SINGLETHREADED
@@ -1030,7 +1030,7 @@ DEVINST getDevInstWith(std::string key, std::string value)
 
 DeviceIdToScsiPortMap getDeviceIdToScsiPortMap()
 {
-    DeviceIdToScsiPortMap deviceIdToScsiPort;
+    DeviceIdToScsiPortMap deviceIdToScsiPort; printf("hi");
     std::map<int, std::string> scsiPortToDriver;
     std::map <std::string, std::vector <std::string>> driverToDeviceIdsMap;
 
