@@ -44,7 +44,7 @@ DEFINE_GUID(GUID_DEVINTERFACE_USB_DEVICE, 0xA5DCBF10L, 0x6530, 0x11D2, 0x90, 0x1
 DEFINE_GUID(GUID_DEVINTERFACE_USB_HOST_CONTROLLER, 0x3abf6f2d, 0x71c4, 0x462a, 0x8a, 0x92, 0x1e, 0x68, 0x61, 0xe6, 0xaf, 0x27);
 
 // A list of all DEVINTERFACE GUIDs
-std::vector<GUID> ALL_GUIDS = {
+const std::vector<GUID> ALL_GUIDS = {
     GUID_DEVINTERFACE_DISK,
     GUID_DEVINTERFACE_CDROM,
     GUID_DEVINTERFACE_PARTITION,
@@ -730,7 +730,6 @@ void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet
 
     delete[] propertyKeyArray;
 }
-
 
 std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid)
 {
