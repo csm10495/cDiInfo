@@ -1395,7 +1395,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
                 devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.bPowerOnToPowerGood, sizeof(UCHAR), "ParentHubTimeToPowerOn", "Time in 2 millisecond intervals that it takes for the device to power on completely.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.bPowerOnToPowerGood * 2) + " Milliseconds"));
 
                 // Number is in milliamperes
-                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.bHubControlCurrent, sizeof(UCHAR), "ParentHubTimeToPowerOn", "Maximum power requirements for the hub's controller.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes"));
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.bHubControlCurrent, sizeof(UCHAR), "ParentHubMaxCurrent", "Maximum power requirements for the hub's controller.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes"));
 
                 devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubIsBusPowered, sizeof(BOOLEAN), "ParentIsBusPowered", "Denotes if the parent is powered by the hub/bus or self-powered.", toBoolString(usbNodeInfo->u.HubInformation.HubIsBusPowered)));
             }
