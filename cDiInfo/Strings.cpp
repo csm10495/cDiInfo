@@ -829,11 +829,11 @@ namespace cdi
             }
             if (IsEqualDevPropKey(DEVPKEY_Device_UpperFilters, propertyKey))
             {
-                return "Device_UpperFilters";
+                return "Device_UpperFiltersDrivers";
             }
             if (IsEqualDevPropKey(DEVPKEY_Device_LowerFilters, propertyKey))
             {
-                return "Device_LowerFilters";
+                return "Device_LowerFiltersDrivers";
             }
             if (IsEqualDevPropKey(DEVPKEY_Device_BusTypeGuid, propertyKey))
             {
