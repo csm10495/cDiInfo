@@ -50,9 +50,6 @@ typedef	struct _SMART_THRESHOLD
 // Used for buffer with 0 length
 #define ZERO_LENGTH_BUFFER "<Zero Length buffer>"
 
-// Characters to trim 
-#define TRIM_CHARS " \n\r\t"
-
 // Macro to get a bool string
 #define toBoolString(num) ((num) ? "True" : "False")
 
@@ -151,3 +148,15 @@ std::string serviceTypeToString(DWORD tmp);
 
 // Converts a file system flag to string
 std::string fileSystemFlagToString(UINT32 flag);
+
+
+namespace cdi
+{
+    namespace strings
+    {
+        // Converts driver type to string
+        std::string driverTypeToString(DWORD driverType);
+
+        std::string resourceTypeToDescription(RESOURCEID resourceType);
+    }
+}

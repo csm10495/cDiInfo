@@ -7,6 +7,13 @@
 // Local includes
 #include "Core.h"
 
+// #defines
+// Adds to the devAttrSet if getDevInfoProperty passes
+#define addIfHave(devAttrSet, devs, devInfo, prop, retType, name, desc, attr) if (getDevInfoProperty(devs, &devInfo, prop, retType, name, desc, attr)) \
+                                                                                        {devAttrSet.insert(attr);}
+// Replaces an item in the AttributeSet. This removes the old one ane inserts the new one. It erases the one with the new name and replaces it with the new item.
+#define replaceInAttributeSet(attributeSet, attr)  {attributeSet.erase(attr); attributeSet.insert(attr);}
+
 // from various WinApi files where importing would get an error (for some reason)
 DEFINE_GUID(GUID_DEVINTERFACE_I2C, 0x2564AA4F, 0xDDDB, 0x4495, 0xB4, 0x97, 0x6A, 0xD4, 0xA8, 0x41, 0x63, 0xD7);
 DEFINE_GUID(GUID_DEVINTERFACE_OPM_2_JTP, 0xE929EEA4, 0xB9F1, 0x407B, 0xAA, 0xB9, 0xAB, 0x08, 0xBB, 0x44, 0xFB, 0xF4);
@@ -183,7 +190,7 @@ HDEVINFO getInterfaceHDevInfo(GUID classGuid)
     return devs;
 }
 
-std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD property, TYPE retType)
+bool getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD property, TYPE retType, std::string name, std::string description, cdi::attr::Attribute &attr)
 {
     char buffer[8192] = { 0 };
     DWORD reqSize;
@@ -194,30 +201,35 @@ std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD p
         // Special handling since this is a structure...
         if (property == SPDRP_DEVICE_POWER_DATA)
         {
-            return propertyBufferToString((BYTE*)buffer, 8192, DEVPROP_TYPE_BINARY, DEVPKEY_Device_PowerData);
+            attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, propertyBufferToString((BYTE*)buffer, reqSize, DEVPROP_TYPE_BINARY, DEVPKEY_Device_PowerData));
+            return true;
         }
 
         std::string retStr = std::string(buffer, reqSize);
         if (retType == _INT_)
         {
-            return std::to_string(*(DWORD*)retStr.c_str());
+            attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, std::to_string(*(DWORD*)retStr.c_str()));
+            return true;
         }
         else if (retType == __STRING_)
         {
-            return delimitedStringToNewlineString(retStr);
+            attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, delimitedStringToNewlineString(retStr));
+            return true;
         }
         else if (retType == _GUID_)
         {
             GUID g = *((GUID*)retStr.c_str());
-            return guidToString(g);
+            attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, guidToString(g));
+            return true;
         }
         else if (retType == __WSTRING_)
         {
             std::wstring tmpWStr((wchar_t*)retStr.c_str());
-            return wStringToString(tmpWStr);
+            attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, wStringToString(tmpWStr));
+            return true;
         }
     }
-    return std::string(UNAVAILABLE_ATTRIBUTE);
+    return false;
 }
 
 bool getDriverInfoData(HDEVINFO devs, SP_DEVINFO_DATA devInfo, PSP_DRVINFO_DATA driverInfoData)
@@ -269,89 +281,64 @@ std::string getDeviceId(DEVINST &devInst)
     return UNAVAILABLE_ATTRIBUTE;
 }
 
-AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, DeviceIdToScsiPortMap &deviceIdToScsiPortMap)
+cdi::attr::AttributeSet getDeviceAttributeSet(HDEVINFO devs, SP_DEVINFO_DATA devInfo, DeviceIdToScsiPortMap &deviceIdToScsiPortMap)
 {
-    AttributeMap devAttrMap;
+    cdi::attr::AttributeSet devAttrSet;
 
-    std::string DeviceDesc = getDevInfoProperty(devs, &devInfo, SPDRP_DEVICEDESC, __STRING_);
-    addToMap(devAttrMap, DeviceDesc);
-    std::string HardwareId = getDevInfoProperty(devs, &devInfo, SPDRP_HARDWAREID, __STRING_);
-    addToMap(devAttrMap, HardwareId);
-    std::string FriendlyName = getDevInfoProperty(devs, &devInfo, SPDRP_FRIENDLYNAME, __STRING_);
-    addToMap(devAttrMap, FriendlyName);
-    std::string CompatibleIds = getDevInfoProperty(devs, &devInfo, SPDRP_COMPATIBLEIDS, __STRING_);
-    addToMap(devAttrMap, CompatibleIds);
-    std::string Unused0 = getDevInfoProperty(devs, &devInfo, SPDRP_UNUSED0, __STRING_);
-    addToMap(devAttrMap, Unused0);
-    std::string Service = getDevInfoProperty(devs, &devInfo, SPDRP_SERVICE, __STRING_);
-    addToMap(devAttrMap, Service);
-    std::string Unused1 = getDevInfoProperty(devs, &devInfo, SPDRP_UNUSED1, __STRING_);
-    addToMap(devAttrMap, Unused1);
-    std::string Unused2 = getDevInfoProperty(devs, &devInfo, SPDRP_UNUSED2, __STRING_);
-    addToMap(devAttrMap, Unused2);
-    std::string Class = getDevInfoProperty(devs, &devInfo, SPDRP_CLASS, __STRING_);
-    addToMap(devAttrMap, Class);
-    std::string ClassGuid = getDevInfoProperty(devs, &devInfo, SPDRP_CLASSGUID, __STRING_);
-    addToMap(devAttrMap, ClassGuid);
-    std::string Driver = getDevInfoProperty(devs, &devInfo, SPDRP_DRIVER, __STRING_);
-    addToMap(devAttrMap, Driver);
-    std::string ConfigFlags = getDevInfoProperty(devs, &devInfo, SPDRP_CONFIGFLAGS, _INT_);
-    addToMap(devAttrMap, ConfigFlags);
-    std::string Manufacturer = getDevInfoProperty(devs, &devInfo, SPDRP_MFG, __STRING_);
-    addToMap(devAttrMap, Manufacturer);
-    std::string LocationInformation = getDevInfoProperty(devs, &devInfo, SPDRP_LOCATION_INFORMATION, __STRING_);
-    addToMap(devAttrMap, LocationInformation);
-    std::string PhysicalDeviceObjectName = getDevInfoProperty(devs, &devInfo, SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, __STRING_);
-    addToMap(devAttrMap, PhysicalDeviceObjectName);
-    std::string Capabilities = getDevInfoProperty(devs, &devInfo, SPDRP_CAPABILITIES, _INT_);
-    addToMap(devAttrMap, Capabilities);
-    std::string UiNumber = getDevInfoProperty(devs, &devInfo, SPDRP_UI_NUMBER, _INT_);
-    addToMap(devAttrMap, UiNumber);
-    std::string UpperFilters = getDevInfoProperty(devs, &devInfo, SPDRP_UPPERFILTERS, __STRING_);
-    addToMap(devAttrMap, UpperFilters);
-    std::string LowerFilters = getDevInfoProperty(devs, &devInfo, SPDRP_LOWERFILTERS, __STRING_);
-    addToMap(devAttrMap, LowerFilters);
-    std::string BusTypeGuid = getDevInfoProperty(devs, &devInfo, SPDRP_BUSTYPEGUID, _GUID_);
-    addToMap(devAttrMap, BusTypeGuid);
-    std::string LegacyBusType = getDevInfoProperty(devs, &devInfo, SPDRP_LEGACYBUSTYPE, _INT_);
-    addToMap(devAttrMap, LegacyBusType);
-    std::string BusNumber = getDevInfoProperty(devs, &devInfo, SPDRP_BUSNUMBER, _INT_);
-    addToMap(devAttrMap, BusNumber);
-    std::string EnumeratorName = getDevInfoProperty(devs, &devInfo, SPDRP_ENUMERATOR_NAME, __STRING_);
-    addToMap(devAttrMap, EnumeratorName);
-    std::string Security = getDevInfoProperty(devs, &devInfo, SPDRP_SECURITY, _INT_);
-    addToMap(devAttrMap, Security);
-    std::string SecuritySds = getDevInfoProperty(devs, &devInfo, SPDRP_SECURITY_SDS, _INT_);
-    addToMap(devAttrMap, SecuritySds);
-    std::string Devtype = getDevInfoProperty(devs, &devInfo, SPDRP_DEVTYPE, _INT_);
-    addToMap(devAttrMap, Devtype);
-    std::string Exclusive = getDevInfoProperty(devs, &devInfo, SPDRP_EXCLUSIVE, _INT_);
-    addToMap(devAttrMap, Exclusive);
-    std::string Characteristics = getDevInfoProperty(devs, &devInfo, SPDRP_CHARACTERISTICS, _INT_);
-    addToMap(devAttrMap, Characteristics);
-    std::string Address = getDevInfoProperty(devs, &devInfo, SPDRP_ADDRESS, _INT_);
-    addToMap(devAttrMap, Address);
-    std::string UiNumberDescFormat = getDevInfoProperty(devs, &devInfo, SPDRP_UI_NUMBER_DESC_FORMAT, __STRING_);
-    addToMap(devAttrMap, UiNumberDescFormat);
-    std::string PowerData = getDevInfoProperty(devs, &devInfo, SPDRP_DEVICE_POWER_DATA, _INT_);
-    addToMap(devAttrMap, PowerData);
-    std::string RemovalPolicy = getDevInfoProperty(devs, &devInfo, SPDRP_REMOVAL_POLICY, _INT_);
-    addToMap(devAttrMap, RemovalPolicy);
-    std::string RemovalPolicyHwDefault = getDevInfoProperty(devs, &devInfo, SPDRP_REMOVAL_POLICY_HW_DEFAULT, _INT_);
-    addToMap(devAttrMap, RemovalPolicyHwDefault);
-    std::string RemovalPolicyOverride = getDevInfoProperty(devs, &devInfo, SPDRP_REMOVAL_POLICY_OVERRIDE, _INT_);
-    addToMap(devAttrMap, RemovalPolicyOverride);
-    std::string InstallState = getDevInfoProperty(devs, &devInfo, SPDRP_INSTALL_STATE, _INT_);
-    addToMap(devAttrMap, InstallState);
-    std::string LocationPaths = getDevInfoProperty(devs, &devInfo, SPDRP_LOCATION_PATHS, __STRING_);
-    addToMap(devAttrMap, LocationPaths);
-    std::string BaseContainerId = getDevInfoProperty(devs, &devInfo, SPDRP_BASE_CONTAINERID, __WSTRING_);
-    addToMap(devAttrMap, BaseContainerId);
+    cdi::attr::Attribute attr;
+
+    // Todo: cleanup parsing of these... A lot of them can have string parsings
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_DEVICEDESC, __STRING_, "DeviceDesc", "A description for the device.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_HARDWAREID, __STRING_, "HardwareId", "Vendor defined identification string used to match a device to an inf file to denote hardware compatibility.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_FRIENDLYNAME, __STRING_, "FriendlyName", "A user-friendly name for a device.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_COMPATIBLEIDS, __STRING_, "CompatibleIds", "Vendor defined identification string used to match a device to an inf file in order of decreasing suitability. Used after no HardwareId matches.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_UNUSED0, _INT_, "Unused0", "In theory, should be unsused. Could be used for vendor unique purposes.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_SERVICE, __STRING_, "Service", "The service name for the device driver.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_UNUSED1, _INT_, "Unused1", "In theory, should be unsused. Could be used for vendor unique purposes.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_UNUSED2, _INT_, "Unused2", "In theory, should be unsused. Could be used for vendor unique purposes.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_CLASS, __STRING_, "Class", "The device setup class name.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_CLASSGUID, __STRING_, "ClassGuid", "A globally unique identifier for the device setup class.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_DRIVER, __STRING_, "DriverKey", "The registry software key for the given driver.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_CONFIGFLAGS, _INT_, "ConfigFlags", "Bitwise or of the device's configuration flags.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_MFG, __STRING_, "Manufacturer", "The device manufacturer.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_LOCATION_INFORMATION, __STRING_, "LocationInformation", "The hardware location of the device.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, __STRING_, "PhysicalDeviceObjectName", "The name associated with the device's physical device object.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_CAPABILITIES, _INT_, "Capabilities", "Bitwise or of device capability flags.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_UI_NUMBER, _INT_, "UiNumber", "A number associated with the device. Usually it is a user-perceived slot number.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_UPPERFILTERS, __STRING_, "UpperFilterDrivers", "Names of the device's upper filter drivers.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_LOWERFILTERS, __STRING_, "LowerFilterDrivers", "Names of the device's upper filter drivers.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_BUSTYPEGUID, _GUID_, "BusTypeGuid", "Globally unique identifier for the device's bus.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_LEGACYBUSTYPE, _INT_, "LegacyBusType", "Legacy bus type of the device instance.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_BUSNUMBER, _INT_, "BusNumber", "Bus number of the specified bus type that this device instance represents.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_ENUMERATOR_NAME, __STRING_, "EnumeratorName", "Name of the enumerator for the device instance", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_SECURITY, _INT_, "SecurityDescriptor", "Contains security information associated with the object.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_SECURITY_SDS, __STRING_, "SecurityDescriptorString", "Contains security information associated with the object as a string.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_DEVTYPE, _INT_, "DeviceType", "The type of the underlying hardware for the driver.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_EXCLUSIVE, _INT_, "Exclusive", "If True, the device can be opened for exclusive use.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_CHARACTERISTICS, _INT_, "Characteristics", "A bitwise or of the device characteristic flags.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_ADDRESS, _INT_, "Address", "Bus specific address of the device instance.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_UI_NUMBER_DESC_FORMAT, __STRING_, "UiNumberDescFormat", "A printf-compatible format string used to display the UiNumber.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_DEVICE_POWER_DATA, _INT_, "PowerData", "Includes a CM_POWER_DATA structure with information about device power management and capabilities.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_REMOVAL_POLICY, _INT_, "RemovalPolicy", "A device property representing the current removal policy for the device instance.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_REMOVAL_POLICY_HW_DEFAULT, _INT_, "RemovalPolicyHwDefault", "A device property representing the HW default removal policy for the device instance.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_REMOVAL_POLICY_OVERRIDE, _INT_, "RemovalPolicyOverride", "A device property representing the override removal policy for the device instance.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_INSTALL_STATE, _INT_, "InstallState", "The installation state of the device instance.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_LOCATION_PATHS, __STRING_, "LocationPaths", "The location of the device instance in the device tree.", attr);
+    addIfHave(devAttrSet, devs, devInfo, SPDRP_BASE_CONTAINERID, __WSTRING_, "BaseContainerId", "GUID value of the base container identifer.", attr);
+
+    auto descAttr = devAttrSet.find(ATTRWITHNAME("UiNumberDescFormat"));
+    auto numberAttr = devAttrSet.find(ATTRWITHNAME("UiNumber"));
+    if (descAttr != devAttrSet.end() && numberAttr != devAttrSet.end())
+    {
+        char c[4096] = { '\0' };
+        sprintf_s(c, descAttr->getValue<char*>(), numberAttr->getValue<char*>());
+        devAttrSet.insert(cdi::attr::Attribute("UiNumberFormatted", "The current, unique, identifier for the instance of this device.", c));
+    }
 
     std::string DeviceId = getDeviceId(devInfo.DevInst);
-    addToMap(devAttrMap, DeviceId);
+    devAttrSet.insert(cdi::attr::Attribute("DeviceId", "The current, unique, identifier for the instance of this device.", DeviceId));
 
-    std::string ChildrenDeviceIds = NO_CHILDREN;
+    std::string ChildrenDeviceIds = "";
     DEVINST childDevInst = { 0 };
     if (CM_Get_Child(&childDevInst, devInfo.DevInst, 0) == CR_SUCCESS)
     {
@@ -363,43 +350,22 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, Devic
         }
     }
     rTrim(ChildrenDeviceIds);
-    addToMap(devAttrMap, ChildrenDeviceIds);
+    if (!ChildrenDeviceIds.empty())
+    {
+        devAttrSet.insert(cdi::attr::Attribute("ChildrenDeviceIds", "The current, unique, identifiers for all children of this device.", ChildrenDeviceIds));
+    }
 
-    std::string ParentDeviceId = NO_PARENT;
+    std::string ParentDeviceId = "";
     DEVINST parentDevInst = { 0 };
     if (CM_Get_Parent(&parentDevInst, devInfo.DevInst, 0) == CR_SUCCESS)
     {
         ParentDeviceId = getDeviceId(parentDevInst);
     }
-    addToMap(devAttrMap, ParentDeviceId);
-
-    ULONG pulStatus = 0;
-    ULONG pulProblemNumber = 0;
-    std::string NodeStatus = UNAVAILABLE_ATTRIBUTE;
-    std::string NodeProblem = UNAVAILABLE_ATTRIBUTE;
-    auto ret = CM_Get_DevNode_Status(&pulStatus, &pulProblemNumber, devInfo.DevInst, 0);
-    if (ret == CR_SUCCESS)
+    rTrim(ParentDeviceId);
+    if (!ParentDeviceId.empty())
     {
-        NodeStatus = nodeStatusToString(pulStatus);
-        if (pulStatus & DN_HAS_PROBLEM)
-        {
-            NodeProblem = cmProbToString(pulProblemNumber);
-        }
-        else
-        {
-            NodeProblem = NO_PROBLEM;
-        }
+        devAttrSet.insert(cdi::attr::Attribute("ParentDeviceId", "The current, unique, identifers for all parents of this device.", ParentDeviceId));
     }
-    addToMap(devAttrMap, NodeStatus);
-    addToMap(devAttrMap, NodeProblem);
-
-    ULONG pulDepth = 0;
-    std::string NodeDepth = UNAVAILABLE_ATTRIBUTE;
-    if (CM_Get_Depth(&pulDepth, devInfo.DevInst, 0) == CR_SUCCESS)
-    {
-        NodeDepth = std::to_string(pulDepth);
-    }
-    addToMap(devAttrMap, NodeDepth);
 
     std::string SiblingDeviceIds = "";
     // Make a copy to not mess up the standard DevInst
@@ -414,35 +380,56 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, Devic
         SiblingDeviceIds = NO_SIBLINGS;
     }
     rTrim(SiblingDeviceIds);
-    addToMap(devAttrMap, SiblingDeviceIds);
+    devAttrSet.insert(cdi::attr::Attribute("SiblingDeviceIds", "The current, unique, identifers for all siblings of this device.", SiblingDeviceIds));
+
+    ULONG pulStatus = 0;
+    ULONG pulProblemNumber = 0;
+    std::string NodeStatus = UNAVAILABLE_ATTRIBUTE;
+    std::string NodeProblem = UNAVAILABLE_ATTRIBUTE;
+    auto ret = CM_Get_DevNode_Status(&pulStatus, &pulProblemNumber, devInfo.DevInst, 0);
+    if (ret == CR_SUCCESS)
+    {
+        NodeStatus = nodeStatusToString(pulStatus);
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pulStatus, sizeof(ULONG), "NodeStatus", "Status for the device node in the local machine's device tree", NodeStatus));
+        if (pulStatus & DN_HAS_PROBLEM)
+        {
+            NodeProblem = cmProbToString(pulProblemNumber);
+        }
+        else
+        {
+            NodeProblem = NO_PROBLEM;
+        }
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pulProblemNumber, sizeof(ULONG), "NodeProblem", "Problem with the device node in the local machine's device tree", NodeProblem));
+    }
+
+    ULONG pulDepth = 0;
+    if (CM_Get_Depth(&pulDepth, devInfo.DevInst, 0) == CR_SUCCESS)
+    {
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pulDepth, sizeof(ULONG), "NodeDepth", "Depth of the device node in the local machine's device tree", std::to_string(pulDepth)));
+    }
 
     SP_DRVINFO_DATA driverInfoData = { 0 };
     driverInfoData.cbSize = sizeof(driverInfoData);
 
     if (getDriverInfoData(devs, devInfo, &driverInfoData))
     {
-        std::string DriverDescription = driverInfoData.Description;
-        addToMap(devAttrMap, DriverDescription);
+        devAttrSet.insert(cdi::attr::Attribute("DriverDescription", "A description for the device driver.", driverInfoData.Description));
 
         SYSTEMTIME st = { 0 };
         FileTimeToSystemTime(&driverInfoData.DriverDate, &st);
         std::string DriverDate = std::to_string(st.wMonth) + "/" + std::to_string(st.wDay) + "/" + std::to_string(st.wYear);
-        addToMap(devAttrMap, DriverDate);
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&driverInfoData.DriverDate, sizeof(FILETIME), "DriverDate", "Build date for the device driver.", DriverDate));
 
         std::string DriverVersion = std::to_string((driverInfoData.DriverVersion >> 48) & 0xFFFF) + "." + \
             std::to_string((driverInfoData.DriverVersion >> 32) & 0xFFFF) + "." + \
             std::to_string((driverInfoData.DriverVersion >> 16) & 0xFFFF) + "." + \
             std::to_string((driverInfoData.DriverVersion) & 0xFFFF);
-        addToMap(devAttrMap, DriverVersion);
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&driverInfoData.DriverVersion, sizeof(UINT64), "DriverVersion", "Version for the given device driver.", DriverVersion));
 
-        std::string DriverMfgName = driverInfoData.MfgName;
-        addToMap(devAttrMap, DriverMfgName);
 
-        std::string DriverProvider = driverInfoData.ProviderName;
-        addToMap(devAttrMap, DriverProvider);
-
-        std::string DriverType = std::to_string(driverInfoData.DriverType);
-        addToMap(devAttrMap, DriverType);
+        devAttrSet.insert(cdi::attr::Attribute("DriverMfgName", "The manufacturer of the device driver.", driverInfoData.MfgName));
+        devAttrSet.insert(cdi::attr::Attribute("DriverProvider", "The manufacturer of the device driver.", driverInfoData.ProviderName));
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&driverInfoData.DriverType, sizeof(DWORD), "DriverType", "Represents if the device is a compatible or class driver", cdi::strings::driverTypeToString(driverInfoData.DriverType)));
     }
 
     // Try to get SCSI port info (This is for interface-less devices... it's disks already have interfaces with device paths that can get SCSI info)
@@ -451,75 +438,75 @@ AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, Devic
     {
         std::string ScsiPortNumber = std::to_string(itr->second);
         std::string ScsiAdapterPath = "\\\\.\\SCSI" + ScsiPortNumber + ":";
-        addToMap(devAttrMap, ScsiAdapterPath);
-        addToMap(devAttrMap, ScsiPortNumber);
+        devAttrSet.insert(cdi::attr::Attribute("ScsiAdapterPath", "SCSI path for the device's adapter.", ScsiAdapterPath));
+        devAttrSet.insert(cdi::attr::Attribute((BYTE*)&itr->second, sizeof(UINT16), "ScsiPortNumber", "Represents if the device is a compatible or class driver", ScsiPortNumber));
     }
 
     // Try to save the SP_DEVINFO_DATA... a bit sketchy but works!
     std::string __devInfoDataString(sizeof(SP_DEVINFO_DATA), '0');
     memcpy((void*)__devInfoDataString.c_str(), &devInfo, sizeof(SP_DEVINFO_DATA));
-    addToMap(devAttrMap, __devInfoDataString);
+    devAttrSet.insert(cdi::attr::Attribute("__devInfoDataString", "A SP_DEVINFO_DATA structure for the given device instance.", __devInfoDataString));
+
 
     // Get DevNode Property Keys
-    addOtherDevNodeProperties(devAttrMap, devInfo.DevInst);
+    addOtherDevNodeProperties(devAttrSet, devInfo.DevInst);
 
     // Get Resource Descriptor Data
-    addDeviceConfigurationAndResources(devAttrMap, devInfo.DevInst);
+    addDeviceConfigurationAndResources(devAttrSet, devInfo.DevInst);
 
     // Get service information from the registry
-    std::string subKey = REGISTRY_SERVICES + Service;
-    std::string ServiceImagePath = "";
-    if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ImagePath", ServiceImagePath))
+    auto service = devAttrSet.find(ATTRWITHNAME("Service"));
+    if (service != devAttrSet.end())
     {
-        // Sometimes this path will start with \\SystemRoot\\System32 and sometimes \\System32\\
-        //   Try to standardize it.
-        char systemDirectory[MAX_PATH] = { '\0' };
-        if (GetSystemDirectory(systemDirectory, MAX_PATH))
+        std::string subKey = REGISTRY_SERVICES + service->getValue<std::string>();
+        std::string ServiceImagePath = "";
+        if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ImagePath", ServiceImagePath))
         {
-            if (startsWith(SYSTEM_ROOT1, ServiceImagePath, true))
+            // Sometimes this path will start with \\SystemRoot\\System32 and sometimes \\System32\\
+            //   Try to standardize it.
+            char systemDirectory[MAX_PATH] = { '\0' };
+            if (GetSystemDirectory(systemDirectory, MAX_PATH))
             {
-                ServiceImagePath = systemDirectory + ServiceImagePath.substr(strlen(SYSTEM_ROOT1));
+                if (startsWith(SYSTEM_ROOT1, ServiceImagePath, true))
+                {
+                    ServiceImagePath = systemDirectory + ServiceImagePath.substr(strlen(SYSTEM_ROOT1));
+                }
+                else if (startsWith(SYSTEM_ROOT2, ServiceImagePath, true))
+                {
+                    ServiceImagePath = systemDirectory + ServiceImagePath.substr(strlen(SYSTEM_ROOT2));
+                }
             }
-            else if (startsWith(SYSTEM_ROOT2, ServiceImagePath, true))
-            {
-                ServiceImagePath = systemDirectory + ServiceImagePath.substr(strlen(SYSTEM_ROOT2));
-            }
+            devAttrSet.insert(cdi::attr::Attribute("ServiceImagePath", "The location of the exe or driver for the given device.", ServiceImagePath));
         }
-        addToMap(devAttrMap, ServiceImagePath);
+
+        UINT64 u = 0;
+        if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ErrorControl", u))
+        {
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&u, sizeof(DWORD), "ServiceErrorControl", "The location of the exe or driver for the given device.", errorControlToString((DWORD)u)));
+        }
+
+        u = 0;
+        if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "Start", u))
+        {
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&u, sizeof(DWORD), "ServiceStartType", "Specifies how the device is started.", startTypeToString((DWORD)u)));
+        }
+        u = 0;
+        if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "Type", u))
+        {
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&u, sizeof(DWORD), "ServiceType", "Specifies the type of the device driver.", serviceTypeToString((DWORD)u)));
+        }
+
+        std::string ObjectName = "";
+        if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ObjectName", ObjectName))
+        {
+            devAttrSet.insert(cdi::attr::Attribute("ObjectName", "The name of the driver object that the I/O Manager uses to load the device driver.", ObjectName));
+        }
     }
 
-    UINT64 u = 0;
-    if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ErrorControl", u))
-    {
-        std::string ServiceErrorControl = errorControlToString((DWORD)u);
-        addToMap(devAttrMap, ServiceErrorControl);
-    }
-
-    u = 0;
-    if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "Start", u))
-    {
-        std::string ServiceStartType = startTypeToString((DWORD)u);
-        addToMap(devAttrMap, ServiceStartType);
-    }
-    u = 0;
-    if (getUIntFromRegistry(HKEY_LOCAL_MACHINE, subKey, "Type", u))
-    {
-        std::string ServiceType = serviceTypeToString((DWORD)u);
-        addToMap(devAttrMap, ServiceType);
-    }
-
-    std::string ObjectName = "";
-    if (getStringFromRegistry(HKEY_LOCAL_MACHINE, subKey, "ObjectName", ObjectName))
-    {
-        addToMap(devAttrMap, ObjectName);
-    }
-
-
-    //GetSystemDirectory
-    return devAttrMap;
+    return devAttrSet;
 }
 
-void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST devInst)
+void addOtherDevNodeProperties(cdi::attr::AttributeSet &attributeSet, DEVINST devInst)
 {
     // First get number of properties
     ULONG propertyKeyCount = 0;
@@ -567,17 +554,19 @@ void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST devInst)
             modifiedKey = key.substr(underscoreLoc);
         }
 
-        if (attributeMap.find(modifiedKey) == attributeMap.end())
+        if (attributeSet.find(ATTRWITHNAME(modifiedKey)) == attributeSet.end())
         {
-            attributeMap[modifiedKey] = value;
+            attributeSet.insert(cdi::attr::Attribute(propertyBuffer, propertyBufferSize, modifiedKey, key, value));
         }
         else // the modified key is in the map already. If it's value matches this one don't add.
              // If the value doesn't match add this value under the original (non-modified) key
         {
-            if (toUpper(std::string(attributeMap[modifiedKey])) != toUpper(std::string(value)))
+            if (toUpper(std::string(attributeSet.find(ATTRWITHNAME(modifiedKey))->getValue<std::string>())) != toUpper(std::string(value)))
             {
-                attributeMap[key] = value;
+                cdi::attr::Attribute newAttr = cdi::attr::Attribute(*attributeSet.find(ATTRWITHNAME(modifiedKey)), "\n" + value);
+                replaceInAttributeSet(attributeSet, newAttr);
             }
+
         }
 
         delete[] propertyBuffer;
@@ -587,7 +576,7 @@ end:
     delete[] propertyKeyArray;
 }
 
-void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devInst)
+void addDeviceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet, DEVINST devInst)
 {
     LOG_CONF  firstLogConf;
     CONFIGRET cmRet = CM_Get_First_Log_Conf(&firstLogConf, devInst, ALLOC_LOG_CONF);
@@ -633,15 +622,15 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
             std::string resourceTypeAsString = resourceTypeToString(resourceType);
             std::string resourceTypeAsStringWithNumber = resourceTypeAsString + "0";
             std::string resourceAsString = resourceToString(buffer, bufferSize, resourceType);
-            delete[] buffer;
 
-            while (attributeMap.find(resourceTypeAsStringWithNumber) != attributeMap.end())
+            while (attributeSet.find(ATTRWITHNAME(resourceTypeAsStringWithNumber)) != attributeSet.end())
             {
                 int endNum = atoi(resourceTypeAsStringWithNumber.substr(resourceTypeAsString.size()).c_str());
                 endNum++;
                 resourceTypeAsStringWithNumber = resourceTypeAsString + std::to_string(endNum);
             }
-            attributeMap[resourceTypeAsStringWithNumber] = resourceAsString;
+            attributeSet.insert(cdi::attr::Attribute(buffer, bufferSize, resourceTypeAsStringWithNumber, cdi::strings::resourceTypeToDescription(resourceType), resourceAsString));
+            delete[] buffer;
 
             LOG_CONF old = nextLogConf;
             if (CM_Get_Next_Res_Des(&nextLogConf, nextLogConf, ResType_All, &resourceType, 0) != CR_SUCCESS)
@@ -668,15 +657,15 @@ void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devI
     firstLogConf = NULL;
 }
 
-void addInterfaceConfigurationAndResources(AttributeMap &attributeMap)
+void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet)
 {
     // Make sure we have an interface path
-    auto itr = attributeMap.find("DevicePath");
-    if (itr == attributeMap.end())
+    auto itr = attributeSet.find(ATTRWITHNAME("DevicePath"));
+    if (itr == attributeSet.end())
     {
         return;
     }
-    std::wstring interfacePath = stringToWString(itr->second);
+    std::wstring interfacePath = stringToWString(itr->getValue<std::string>());
 
     // Get size of array
     ULONG propertyKeyCount = 0;
@@ -723,16 +712,17 @@ void addInterfaceConfigurationAndResources(AttributeMap &attributeMap)
             modifiedKey = key.substr(underscoreLoc);
         }
 
-        if (attributeMap.find(modifiedKey) == attributeMap.end())
+        if (attributeSet.find(ATTRWITHNAME(modifiedKey)) == attributeSet.end())
         {
-            attributeMap[modifiedKey] = value;
+            attributeSet.insert(cdi::attr::Attribute(propertyBuffer, propertyBufferSize, modifiedKey, key, value));
         }
-        else // the modified key is in the map already. If it's value matches this one don't add.
+        else // the modified key is in the Set already. If it's value matches this one don't add.
              // If the value doesn't match add this value under the original (non-modified) key
         {
-            if (toUpper(std::string(attributeMap[modifiedKey])) != toUpper(std::string(value)))
+            if (toUpper(std::string(attributeSet.find(ATTRWITHNAME(modifiedKey))->getValue<std::string>())) != toUpper(std::string(value)))
             {
-                attributeMap[key] = value;
+                cdi::attr::Attribute newAttr = cdi::attr::Attribute(*attributeSet.find(ATTRWITHNAME(modifiedKey)), "\n" + value);
+                replaceInAttributeSet(attributeSet, newAttr);
             }
         }
         delete[] propertyBuffer;
@@ -741,45 +731,46 @@ void addInterfaceConfigurationAndResources(AttributeMap &attributeMap)
     delete[] propertyKeyArray;
 }
 
-std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
+
+std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid)
 {
-    std::vector<AttributeMap> interfaces;
+    std::vector<cdi::attr::AttributeSet> interfaces;
 
     if (classGuid == GUID_NULL)
     {
 #ifdef MULTITHREADED
-        std::vector<std::future<std::vector<AttributeMap>>> vectorFutureVectorOfAttributeMaps;
+        std::vector<std::future<std::vector<cdi::attr::AttributeSet>>> vectorFutureVectorOfAttributeSets;
 #else // SINGLETHEADED
-        std::vector<std::vector<AttributeMap>> vectorOfVectorOfAttributeMaps;
+        std::vector<std::vector<cdi::attr::AttributeSet>> vectorOfVectorOfAttributeSets;
 #endif // SINGLETHEADED
         for (auto guid : ALL_GUIDS)
         {
 #ifdef MULTITHREADED
             // multithreading
-            vectorFutureVectorOfAttributeMaps.push_back(std::async(getInterfaceAttributeMap, guid));
+            vectorFutureVectorOfAttributeSets.push_back(std::async(getInterfaceAttributeSet, guid));
 #else // SINGLETHEADED
-            vectorOfVectorOfAttributeMaps.push_back(getInterfaceAttributeMap(guid));
+            vectorOfVectorOfAttributeSets.push_back(getInterfaceAttributeSet(guid));
 #endif // SINGLETHEADED
         }
 
 #ifdef MULTITHREADED
         // join
-        for (std::future<std::vector<AttributeMap>> &futureVectorOfAttributeMaps : vectorFutureVectorOfAttributeMaps)
+        for (std::future<std::vector<cdi::attr::AttributeSet>> &futureVectorOfAttributeSets : vectorFutureVectorOfAttributeSets)
         {
-            for (AttributeMap &attributeMap : futureVectorOfAttributeMaps.get())
+            for (cdi::attr::AttributeSet &attributeSet : futureVectorOfAttributeSets.get())
             {
 #else // SINGLETHEADED
-        for (std::vector<AttributeMap> &vectorOfAttributeMaps : vectorOfVectorOfAttributeMaps)
+        for (std::vector<cdi::attr::AttributeSet> &vectorOfAttributeSets : vectorOfVectorOfAttributeSets)
         {
-            for (AttributeMap &attributeMap : vectorOfAttributeMaps)
+            for (cdi::attr::AttributeSet &attributeSet : vectorOfAttributeSets)
             {
 #endif // SINGLETHEADED
                 bool merged = false;
-                for (AttributeMap &interfaceMap : interfaces)
+                for (cdi::attr::AttributeSet &interfaceSet : interfaces)
                 {
-                    if (attributeMap["DeviceId"] == interfaceMap["DeviceId"])
+                    if (attributeSet.find(ATTRWITHNAME("DeviceId"))->getValue<std::string>() == interfaceSet.find(ATTRWITHNAME("DeviceId"))->getValue<std::string>())
                     {
-                        attributeMap = mergeAttributeMaps(interfaceMap, attributeMap);
+                        attributeSet = mergeAttributeSets(interfaceSet, attributeSet);
                         merged = true;
                         break;
                     }
@@ -787,7 +778,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
                 if (!merged)
                 {
-                    interfaces.push_back(attributeMap);
+                    interfaces.push_back(attributeSet);
                 }
             }
         }
@@ -801,7 +792,7 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
     if (interfaceDevs == INVALID_HANDLE_VALUE)
     {
-        return std::vector<AttributeMap>();
+        return std::vector<cdi::attr::AttributeSet>();
     }
 
     SP_DEVINFO_DATA devInfo;
@@ -849,27 +840,26 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
 
         if (SetupDiGetDeviceInterfaceDetail(interfaceDevs, &interfaceInfo, interfaceDetail, size, NULL, &devInfo))
         {
-            AttributeMap devAttrMap;
-            std::string InterfaceClassGuid = guidToString(interfaceInfo.InterfaceClassGuid);
+            cdi::attr::AttributeSet devAttrSet;
             std::string DevicePath = interfaceDetail->DevicePath;
 
 #ifdef MULTITHREADED
-            std::future<AttributeMap> futureDevAttrMap = std::async(getDeviceAttributeMap, interfaceDevs, devInfo, ref(deviceIdToScsiPortMap));
+            std::future<cdi::attr::AttributeSet> futureDevAttrSet = std::async(getDeviceAttributeSet, interfaceDevs, devInfo, ref(deviceIdToScsiPortMap));
 #else // SINGLETHREADED
-            devAttrMap = getDeviceAttributeMap(interfaceDevs, devInfo, deviceIdToScsiPortMap);
+            devAttrSet = getDeviceAttributeSet(interfaceDevs, devInfo, deviceIdToScsiPortMap);
 #endif // SINGLETHREADED
 
-            AttributeMap otherAttrMap = getAttributeMapFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
+            cdi::attr::AttributeSet otherAttrSet = getAttributeSetFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
 
 #ifdef MULTITHREADED
-            devAttrMap = mergeAttributeMaps(futureDevAttrMap.get(), otherAttrMap);
+            devAttrSet = mergeAttributeSets(futureDevAttrSet.get(), otherAttrSet);
 #else // SINGLETHREADED
-            mergeAttributeMaps(devAttrMap, otherAttrMap);
+            mergeAttributeSets(devAttrSet, otherAttrSet);
 #endif // SINGLETHREADED
 
-            addToMap(devAttrMap, InterfaceClassGuid);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&interfaceInfo.InterfaceClassGuid, sizeof(GUID), "InterfaceClassGuid", "A globally unique identifier for this particular interface type.", guidToString(interfaceInfo.InterfaceClassGuid)));
 
-            interfaces.push_back(devAttrMap);
+            interfaces.push_back(devAttrSet);
 
         }
 
@@ -892,15 +882,15 @@ std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid)
     return interfaces;
 }
 
-std::vector<AttributeMap> getAllDevicesAttributeMap()
+std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet()
 {
     HDEVINFO deviceDevs = getAllClassesHDevInfo();
 
     SP_DEVINFO_DATA devInfo;
     devInfo.cbSize = sizeof(SP_DEVINFO_DATA);
 
-    std::future<std::vector<AttributeMap>> futureCompleteDevicesAttrMap;
-    std::vector<AttributeMap> completeDevicesAttrMap;
+    std::future<std::vector<cdi::attr::AttributeSet>> futureCompleteDevicesAttrSet;
+    std::vector<cdi::attr::AttributeSet> completeDevicesAttrSet;
 
     DeviceIdToScsiPortMap deviceIdToScsiPortMap = getDeviceIdToScsiPortMap();
 
@@ -912,11 +902,11 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
     {
 
 #ifdef MULTITHREADED
-        futureCompleteDevicesAttrMap = std::async(getInterfaceAttributeMap, GUID_NULL);
-        std::vector<std::future<AttributeMap>> devAttrMapsToAdd;
+        futureCompleteDevicesAttrSet = std::async(getInterfaceAttributeSet, GUID_NULL);
+        std::vector<std::future<cdi::attr::AttributeSet>> devAttrSetsToAdd;
 #else // SINGLETHREADED
-        completeDevicesAttrMap = getInterfaceAttributeMap(GUID_NULL);
-        std::vector<AttributeMap> devAttrMapsToAdd;
+        completeDevicesAttrSet = getInterfaceAttributeSet(GUID_NULL);
+        std::vector<cdi::attr::AttributeSet> devAttrSetsToAdd;
 #endif // SINGLETHREADED
 
         std::map<std::string, SP_DEVINFO_DATA> deviceIdToInfoData;
@@ -928,15 +918,15 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
         }
 
 #ifdef MULTITHREADED
-        completeDevicesAttrMap = futureCompleteDevicesAttrMap.get();
+        completeDevicesAttrSet = futureCompleteDevicesAttrSet.get();
 #endif // MULTITHEADED
 
         for (auto &dIAI : deviceIdToInfoData)
         {
             bool needToAdd = true;
-            for (AttributeMap &i : completeDevicesAttrMap)
+            for (cdi::attr::AttributeSet &i : completeDevicesAttrSet)
             {
-                if (i["DeviceId"] == dIAI.first)
+                if (i.find(ATTRWITHNAME("DeviceId"))->getValue<std::string>() == dIAI.first)
                 {
                     needToAdd = false;
                     break;
@@ -946,22 +936,22 @@ std::vector<AttributeMap> getAllDevicesAttributeMap()
             if (needToAdd)
             {
 #ifdef MULTITHREADED
-                devAttrMapsToAdd.push_back(std::async(getDeviceAttributeMap, deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
+                devAttrSetsToAdd.push_back(std::async(getDeviceAttributeSet, deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
 #else // SINGLETHREADED
-                devAttrMapsToAdd.push_back(getDeviceAttributeMap(deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
+                devAttrSetsToAdd.push_back(getDeviceAttributeSet(deviceDevs, dIAI.second, ref(deviceIdToScsiPortMap)));
 #endif // SINGLETHREADED
             }
         }
 
 #ifdef MULTITHREADED
-        for (std::future<AttributeMap> &futureAttrMap : devAttrMapsToAdd)
+        for (std::future<cdi::attr::AttributeSet> &futureAttrSet : devAttrSetsToAdd)
         {
-            completeDevicesAttrMap.push_back(futureAttrMap.get());
+            completeDevicesAttrSet.push_back(futureAttrSet.get());
         }
 #else // SINGLETHREADED
-        for (AttributeMap &attrMap : devAttrMapsToAdd)
+        for (cdi::attr::AttributeSet &attrSet : devAttrSetsToAdd)
         {
-            completeDevicesAttrMap.push_back(attrMap);
+            completeDevicesAttrSet.push_back(attrSet);
         }
 #endif // SINGLETHREADED
     }
@@ -973,56 +963,57 @@ exit:
         SetupDiDestroyDeviceInfoList(deviceDevs);
     }
 
-    return completeDevicesAttrMap;
+    return completeDevicesAttrSet;
 }
 
-void printAttributeMap(AttributeMap &attrMap)
+void printAttributeSet(cdi::attr::AttributeSet &attrMap)
 {
     std::regex newlineRegex = std::regex("\n");
     for (auto i : attrMap)
     {
         // Hide 'private' attributes
-        if (!startsWith("__", i.first, true))
+        if (!startsWith("__", i.getName(), true))
         {
-            std::string value = i.second;
+            std::string value = i.getValue<std::string>();
 
             std::string spaces = "                           ";
-            while (spaces.size() < i.first.size() + 2)
+            while (spaces.size() < i.getName().size() + 2)
             {
                 spaces += " ";
             }
 
             value = std::regex_replace(value, newlineRegex, "\n" + spaces);
 
-            printf("%-25s: %s\n", i.first.c_str(), value.c_str());
+            printf("%-25s: %s\n", i.getName().c_str(), value.c_str());
         }
     }
     puts("*******************************************************");
 }
 
-AttributeMap getAttributeMapWith(std::string key, std::string value)
+
+cdi::attr::AttributeSet getAttributeSetWith(std::string key, std::string value)
 {
-    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
-    for (auto &deviceAttrMap : devicesAttributeMap)
+    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+    for (auto &deviceAttrSet : devicesAttributeSet)
     {
-        auto itr = deviceAttrMap.find(key);
-        if (itr != deviceAttrMap.end())
+        auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+        if (itr != deviceAttrSet.end())
         {
-            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
             {
-                return deviceAttrMap;
+                return deviceAttrSet;
             }
         }
     }
-    return AttributeMap();
+    return cdi::attr::AttributeSet();
 }
 
 DEVINST getDevInstWith(std::string key, std::string value)
 {
-    AttributeMap deviceAttrMap = getAttributeMapWith(key, value);
-    if (!deviceAttrMap.empty())
+    cdi::attr::AttributeSet deviceAttrSet = getAttributeSetWith(key, value);
+    if (!deviceAttrSet.empty())
     {
-        PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrMap[DEVINFO_DATA_STRING].c_str();
+        PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrSet.find(ATTRWITHNAME(DEVINFO_DATA_STRING))->getValue<BYTE*>();
         return pDevInfoData->DevInst;
     }
     return NULL;
@@ -1030,7 +1021,7 @@ DEVINST getDevInstWith(std::string key, std::string value)
 
 DeviceIdToScsiPortMap getDeviceIdToScsiPortMap()
 {
-    DeviceIdToScsiPortMap deviceIdToScsiPort; printf("hi");
+    DeviceIdToScsiPortMap deviceIdToScsiPort;
     std::map<int, std::string> scsiPortToDriver;
     std::map <std::string, std::vector <std::string>> driverToDeviceIdsMap;
 
@@ -1069,38 +1060,48 @@ DeviceIdToScsiPortMap getDeviceIdToScsiPortMap()
     return deviceIdToScsiPort;
 }
 
-AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap)
+cdi::attr::AttributeSet &mergeAttributeSets(cdi::attr::AttributeSet &oldSet, cdi::attr::AttributeSet &newSet)
 {
-    for (auto &i : oldAMap)
+    cdi::attr::AttributeSet thingsToAddToOld;
+
+    for (const cdi::attr::Attribute &oldSetAttr : oldSet)
     {
-        // It's rare but sometimes the newAMap won't have something in the oldAMap (or vice-versa)
-        if (newAMap.find(i.first) != newAMap.end())
+        auto newAttrItr = newSet.find(oldSetAttr);
+        // It's rare but sometimes the newASet won't have something in the oldASet (or vice-versa)
+        if (newAttrItr != newSet.end() && !startsWith("__", newAttrItr->getName(), true))
         {
-            // Don't merge private vars... take 1 of them
-            if (i.second != newAMap[i.first] & !startsWith("__", i.first, true))
+            // new set and old set have same item (name)
+            if (oldSetAttr.getValue<std::string>() != newAttrItr->getValue<std::string>())
             {
-                // Merge by adding attributes that are different
-                i.second += "\n" + newAMap[i.first];
+                // delete current item in set to replace it with updated one
+                auto n = cdi::attr::Attribute(oldSetAttr, "\n" + newAttrItr->getValue<std::string>());
+                thingsToAddToOld.insert(n);
             }
         }
     }
 
-    // If something is just in the newAMap, we need to bring it over to the oldAMap
-    for (auto &i : newAMap)
+    // Remove stale elements and add new from previous loop
+    for (const cdi::attr::Attribute &attr : thingsToAddToOld)
     {
-        if (oldAMap.find(i.first) == oldAMap.end())
+        replaceInAttributeSet(oldSet, attr);
+    }
+
+    // If something is just in the newASet, we need to bring it over to the oldASet
+    for (auto &newSetAttr : newSet)
+    {
+        if (oldSet.find(newSetAttr) == oldSet.end())
         {
-            oldAMap[i.first] = i.second;
+            oldSet.insert(newSetAttr);
         }
     }
 
-    return oldAMap;
+    return oldSet;
 }
 
-AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std::string, std::string> &msDosDeviceNameToDriveLetterMap)
+cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, std::map<std::string, std::string> &msDosDeviceNameToDriveLetterMap)
 {
-    AttributeMap devAttrMap;
-    devAttrMap["DevicePath"] = DevicePath;
+    cdi::attr::AttributeSet devAttrSet;
+    devAttrSet.insert(cdi::attr::Attribute("DevicePath", "A path used to send I/O Control commands to the interface.", DevicePath));
 
     char targetPaths[4096];
     // substr(4) to get rid of the \\.\ 
@@ -1109,14 +1110,13 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
     {
         std::string MSDosDeviceName = std::string(targetPaths, targetPathsLength);
         MSDosDeviceName = delimitedStringToNewlineString(MSDosDeviceName);
-        addToMap(devAttrMap, MSDosDeviceName);
+        devAttrSet.insert(cdi::attr::Attribute("MSDosDeviceName", "A named device object that is often created by a non-Windows Driver Model (WDM). Usually these device names are part of the \\DosDevices\\ directory. Well known MS-DOS device names are required to be used for specific well-known device types to maintain compatibility with user-mode applications.", MSDosDeviceName));
 
         // Map to drive letter... not quite sure what would happen if a volume spans multple MSDosDevices...
         if (msDosDeviceNameToDriveLetterMap.find(MSDosDeviceName) != msDosDeviceNameToDriveLetterMap.end())
         {
             std::string DriveLetter = msDosDeviceNameToDriveLetterMap[MSDosDeviceName];
-            addToMap(devAttrMap, DriveLetter);
-
+            devAttrSet.insert(cdi::attr::Attribute("DriveLetter", "The drive letter corresponding with this device.", DriveLetter));
             std::string driveLetterWithBackslash = DriveLetter + "\\";
             memset(&targetPaths, '\0', sizeof(targetPaths));
 
@@ -1124,12 +1124,13 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
             if (GetVolumeNameForVolumeMountPoint(driveLetterWithBackslash.c_str(), targetPaths, sizeof(targetPaths)))
             {
                 std::string VolumeName = targetPaths;
-                addToMap(devAttrMap, VolumeName);
+                devAttrSet.insert(cdi::attr::Attribute("VolumeName", "The volume GUID path of the form \\\\?\\Volume{GUID}\\ where GUID identifies the volume.", targetPaths));
             }
         }
     }
 
-    addInterfaceConfigurationAndResources(devAttrMap);
+    addInterfaceConfigurationAndResources(devAttrSet);
+
 
     // See if we can find a PHYSICALDRIVE path
     HANDLE handle = CreateFile(DevicePath.c_str(),
@@ -1142,45 +1143,41 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
 
     if (handle != INVALID_HANDLE_VALUE)
     {
-        BYTE b[4096] = { 0 };
+        BYTE b[8096] = { 0 }; // reuse buffer
+        BYTE * b2 = b + sizeof(b) / 2; // secondary buffer (same one just the second half)
         DWORD bytesReturned;
-        STORAGE_DEVICE_NUMBER storageDeviceNumber = { 0 };
-        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, &storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
+        PSTORAGE_DEVICE_NUMBER storageDeviceNumber = (PSTORAGE_DEVICE_NUMBER)b;
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_DEVICE_NUMBER, NULL, 0, storageDeviceNumber, sizeof(STORAGE_DEVICE_NUMBER), &bytesReturned, NULL) && bytesReturned != 0)
         {
-            std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber.DeviceNumber);
-            addToMap(devAttrMap, PhysicalDrivePath);
+            std::string PhysicalDrivePath = "\\\\.\\PHYSICALDRIVE" + std::to_string(storageDeviceNumber->DeviceNumber);
+            devAttrSet.insert(cdi::attr::Attribute("PhysicalDrivePath", "A device path to the physical drive. Often equivalent to another device path that will have more device information including GUID.", PhysicalDrivePath));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageDeviceNumber->DeviceNumber, sizeof(DWORD), "DeviceNumber", "The number corresponding with this particular physical drive. Can be placed on the end of \\\\.\\PHYSICALDRIVE to form a device path.", std::to_string(storageDeviceNumber->DeviceNumber)));
+
+            // Check for valid partition
+            if (storageDeviceNumber->PartitionNumber != (DWORD)-1)
+            {
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageDeviceNumber->PartitionNumber, sizeof(DWORD), "PartitionNumber", "The number partition for this drive.", std::to_string(storageDeviceNumber->PartitionNumber)));
+            }
+
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageDeviceNumber->DeviceType, sizeof(DWORD), "DeviceType", "The type of the underlying hardware for the drive.", std::to_string(storageDeviceNumber->DeviceType)));
 
             // substr(4) to get rid of the \\.\ 
-            DWORD targetPathsLength = QueryDosDevice(PhysicalDrivePath.substr(4).c_str(), targetPaths, 4096);
+            DWORD targetPathsLength = QueryDosDevice(PhysicalDrivePath.substr(4).c_str(), (char*)b, 4096);
             if (targetPathsLength != 0)
             {
-                std::string MSDosPhysicalDriveDeviceName = std::string(targetPaths, targetPathsLength);
+                std::string MSDosPhysicalDriveDeviceName = std::string((char*)b, targetPathsLength);
                 MSDosPhysicalDriveDeviceName = delimitedStringToNewlineString(MSDosPhysicalDriveDeviceName);
-                addToMap(devAttrMap, MSDosPhysicalDriveDeviceName);
+                devAttrSet.insert(cdi::attr::Attribute("MSDosPhysicalDriveDeviceName", "MSDos device path as an alias to this device's \\\\.\\PHYSICALDRIVE# path", MSDosPhysicalDriveDeviceName));
             }
-
-            std::string PartitionNumber;
-            if (storageDeviceNumber.PartitionNumber == (DWORD)-1)
-            {
-                PartitionNumber = "<Device Cannot Be Partitioned>";
-            }
-            else
-            {
-                PartitionNumber = std::to_string(storageDeviceNumber.PartitionNumber);
-            }
-            addToMap(devAttrMap, PartitionNumber);
-
-            std::string DeviceType = std::to_string(storageDeviceNumber.DeviceType);
-            addToMap(devAttrMap, DeviceType);
         }
 
-        SCSI_ADDRESS scsiAddress = { 0 };
-        if (DeviceIoControl(handle, IOCTL_SCSI_GET_ADDRESS, NULL, 0, &scsiAddress, sizeof(SCSI_ADDRESS), &bytesReturned, NULL))
+        PSCSI_ADDRESS scsiAddress = (PSCSI_ADDRESS)b;
+        if (DeviceIoControl(handle, IOCTL_SCSI_GET_ADDRESS, NULL, 0, scsiAddress, sizeof(SCSI_ADDRESS), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            if (scsiAddress.Length == sizeof(SCSI_ADDRESS))
+            if (scsiAddress->Length == sizeof(SCSI_ADDRESS))
             {
-                std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiAddress.PortNumber) + ":";
-                addToMap(devAttrMap, ScsiAdapterPath);
+                std::string ScsiAdapterPath = "\\\\.\\SCSI" + std::to_string(scsiAddress->PortNumber) + ":";
+                devAttrSet.insert(cdi::attr::Attribute("ScsiAdapterPath", "A device path to the device's SCSI Adapter.", ScsiAdapterPath));
 
                 // substr(4) to get rid of the \\.\ 
                 DWORD targetPathsLength = QueryDosDevice(ScsiAdapterPath.substr(4).c_str(), targetPaths, 4096);
@@ -1188,83 +1185,65 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
                 {
                     std::string MSDosAdapterName = std::string(targetPaths, targetPathsLength);
                     MSDosAdapterName = delimitedStringToNewlineString(MSDosAdapterName);
-                    addToMap(devAttrMap, MSDosAdapterName);
+                    devAttrSet.insert(cdi::attr::Attribute("MSDosAdapterName", "MSDos device path as an alias to this device's \\\\.\\SCSI#: path", MSDosAdapterName));
                 }
 
-                std::string ScsiPathId = std::to_string(scsiAddress.PathId);
-                addToMap(devAttrMap, ScsiPathId);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&scsiAddress->PathId, sizeof(UCHAR), "ScsiPathId", "SCSI Path Id. Often points to a specific device behind the host bus (SCSI) adapter.", std::to_string(scsiAddress->PathId)));
 
-                std::string ScsiLun = std::to_string(scsiAddress.Lun);
-                addToMap(devAttrMap, ScsiLun);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&scsiAddress->Lun, sizeof(UCHAR), "ScsiLun", "SCSI Logical Unit Number. Often points to a specific device handler behind a specific path id and target id behind the host bus (SCSI) adapter.", std::to_string(scsiAddress->Lun)));
 
-                std::string ScsiTargetId = std::to_string(scsiAddress.TargetId);
-                addToMap(devAttrMap, ScsiTargetId);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&scsiAddress->TargetId, sizeof(UCHAR), "ScsiTargetId", "SCSI Target Id. Often points to a specific device handler behind a specific path id behind the host bus (SCSI) adapter.", std::to_string(scsiAddress->TargetId)));
 
-                std::string ScsiPortNumber = std::to_string(scsiAddress.PortNumber);
-                addToMap(devAttrMap, ScsiPortNumber);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&scsiAddress->PortNumber, sizeof(UCHAR), "ScsiPortNumber", "SCSI Port Number. Often points to a specific host bus (SCSI) adapter.", std::to_string(scsiAddress->PortNumber)));
 
-                // Get IO_SCSI_CAPABILITIES
-                IO_SCSI_CAPABILITIES ioScsiCapabilities = { 0 };
-                if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, &ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL))
+                // Get IO_SCSI_CAPABILITIES... I think this may make more sense if sent to the adapter instead of device... :)
+                PIO_SCSI_CAPABILITIES ioScsiCapabilities = (PIO_SCSI_CAPABILITIES)b;
+                if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL) && bytesReturned > 0)
                 {
-                    std::string MaximumTransferLength = std::to_string(ioScsiCapabilities.MaximumTransferLength);
-                    addToMap(devAttrMap, MaximumTransferLength);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->MaximumTransferLength, sizeof(ULONG), "MaximumTransferLength", "Maximum size, in bytes, of a single SCSI request block (SRB).", std::to_string(ioScsiCapabilities->MaximumTransferLength)));
 
-                    std::string MaximumPhysicalPages = std::to_string(ioScsiCapabilities.MaximumPhysicalPages);
-                    addToMap(devAttrMap, MaximumPhysicalPages);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->MaximumPhysicalPages, sizeof(ULONG), "MaximumPhysicalPages", "Maximum number of physical pages per data buffer.", std::to_string(ioScsiCapabilities->MaximumPhysicalPages)));
 
-                    std::string SupportedAsynchronousEvents = toBoolString(ioScsiCapabilities.SupportedAsynchronousEvents);
-                    addToMap(devAttrMap, SupportedAsynchronousEvents);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->SupportedAsynchronousEvents, sizeof(ULONG), "SupportedAsynchronousEvents", "Whether or not the host adapter supports SCSI asynchronous receive-event operations.", toBoolString(ioScsiCapabilities->SupportedAsynchronousEvents)));
 
-                    std::string AlignmentMask = std::to_string(ioScsiCapabilities.AlignmentMask);
-                    addToMap(devAttrMap, AlignmentMask);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AlignmentMask, sizeof(ULONG), "AlignmentMask", "The alignment mask for data transfers. Transfer data must be aligned on an address that is an integer multiple of this value.", std::to_string(ioScsiCapabilities->AlignmentMask)));
 
-                    std::string TaggedQueuing = toBoolString(ioScsiCapabilities.TaggedQueuing);
-                    addToMap(devAttrMap, TaggedQueuing);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->TaggedQueuing, sizeof(BOOLEAN), "TaggedQueuing", "Whether or not the device's host adapter supports tagged queuing.", toBoolString(ioScsiCapabilities->TaggedQueuing)));
 
-                    std::string AdapterScansDown = toBoolString(ioScsiCapabilities.AdapterScansDown);
-                    addToMap(devAttrMap, AdapterScansDown);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AdapterScansDown, sizeof(BOOLEAN), "AdapterScansDown", "Whether or not the device's host adapter scans down for BIOS devices.", toBoolString(ioScsiCapabilities->AdapterScansDown)));
 
-                    std::string AdapterUsesPio = toBoolString(ioScsiCapabilities.AdapterUsesPio);
-                    addToMap(devAttrMap, AdapterUsesPio);
+                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AdapterUsesPio, sizeof(BOOLEAN), "AdapterUsesPio", "Whether or not the device's host adapter uses programmed I/O.", toBoolString(ioScsiCapabilities->AdapterUsesPio)));
                 }
             }
         }
 
         // Get hotplug info
-        STORAGE_HOTPLUG_INFO storageHotplugInfo = { 0 };
-        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, &storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL) && bytesReturned != 0)
+        PSTORAGE_HOTPLUG_INFO storageHotplugInfo = (PSTORAGE_HOTPLUG_INFO)b;
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_HOTPLUG_INFO, NULL, 0, storageHotplugInfo, sizeof(STORAGE_HOTPLUG_INFO), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string MediaRemovable = toBoolString(storageHotplugInfo.MediaRemovable);
-            addToMap(devAttrMap, MediaRemovable);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageHotplugInfo->MediaRemovable, sizeof(BOOLEAN), "MediaRemovable", "Specifies whether the device media is removable.", toBoolString(storageHotplugInfo->MediaRemovable)));
 
-            std::string MediaHotplug = toBoolString(storageHotplugInfo.MediaHotplug);
-            addToMap(devAttrMap, MediaHotplug);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageHotplugInfo->MediaHotplug, sizeof(BOOLEAN), "MediaHotplug", "Specifies whether the device media is lockable.", toBoolString(storageHotplugInfo->MediaHotplug)));
 
-            std::string DeviceHotplug = toBoolString(storageHotplugInfo.DeviceHotplug);
-            addToMap(devAttrMap, DeviceHotplug);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageHotplugInfo->DeviceHotplug, sizeof(BOOLEAN), "DeviceHotplug", "Specifies whether the device is a hotplug device.", toBoolString(storageHotplugInfo->DeviceHotplug)));
         }
 
         // Get media serial number
         PMEDIA_SERIAL_NUMBER_DATA  mediaSerialNumberData = (PMEDIA_SERIAL_NUMBER_DATA)b;
-        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, &mediaSerialNumberData, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        if (DeviceIoControl(handle, IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER, NULL, 0, mediaSerialNumberData, 512, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string MediaSerialNumber = std::string((char*)mediaSerialNumberData->SerialNumberData, mediaSerialNumberData->SerialNumberLength);
-            addToMap(devAttrMap, MediaSerialNumber);
+            devAttrSet.insert(cdi::attr::Attribute("MediaSerialNumber", "USB media serial number for a USB device.", std::string((char*)mediaSerialNumberData->SerialNumberData, mediaSerialNumberData->SerialNumberLength)));
         }
 
         // Get media serial number
-        STORAGE_READ_CAPACITY storageReadCapacity = { 0 };
-        if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL) && bytesReturned != 0)
+        PSTORAGE_READ_CAPACITY storageReadCapacity = (PSTORAGE_READ_CAPACITY)b;
+        if (DeviceIoControl(handle, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, storageReadCapacity, sizeof(STORAGE_READ_CAPACITY), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string BlockLength = std::to_string(storageReadCapacity.BlockLength);
-            addToMap(devAttrMap, BlockLength);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageReadCapacity->BlockLength, sizeof(ULONG), "BlockLength", "The number of bytes in a block from this device.", std::to_string(storageReadCapacity->BlockLength)));
 
-            std::string NumberOfBlocks = std::to_string(storageReadCapacity.NumberOfBlocks.QuadPart);
-            addToMap(devAttrMap, NumberOfBlocks);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageReadCapacity->NumberOfBlocks.QuadPart, sizeof(LARGE_INTEGER), "NumberOfBlocks", "The number of blocks on the storage disk.", std::to_string(storageReadCapacity->NumberOfBlocks.QuadPart)));
 
-            std::string DiskLength = std::to_string(storageReadCapacity.DiskLength.QuadPart);
-            addToMap(devAttrMap, DiskLength);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageReadCapacity->DiskLength.QuadPart, sizeof(LARGE_INTEGER), "DiskLength", "The size of the storage disk in bytes.", std::to_string(storageReadCapacity->DiskLength.QuadPart)));
         }
 
         // Get storage unique identifier
@@ -1273,88 +1252,84 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
         memset(&storagePropertyQuery, 0, sizeof(STORAGE_PROPERTY_QUERY));
         storagePropertyQuery.PropertyId = StorageDeviceUniqueIdProperty;
         storagePropertyQuery.QueryType = PropertyStandardQuery;
-        if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL) && bytesReturned != 0)
+        if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, &storagePropertyQuery, sizeof(STORAGE_PROPERTY_QUERY), &b, 4096, &bytesReturned, NULL) && bytesReturned > 0)
         {
             PSTORAGE_DEVICE_ID_DESCRIPTOR pStorageDeviceIdDescriptor = (PSTORAGE_DEVICE_ID_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceIdOffset);
 
             PSTORAGE_DEVICE_DESCRIPTOR pStorageDeviceDescriptor = (PSTORAGE_DEVICE_DESCRIPTOR)(b + pStorageDeviceUniqueIdentifer->StorageDeviceOffset);
 
-            std::string CommandQueueing = toBoolString(pStorageDeviceDescriptor->CommandQueueing);
-            addToMap(devAttrMap, CommandQueueing);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageDeviceDescriptor->CommandQueueing, sizeof(BOOLEAN), "CommandQueueing", "Indicates if the device supports outstanding commands via SCSI tagged queuing or another mechanism. The Storport driver is responsible for synchronizing the commands.", toBoolString(pStorageDeviceDescriptor->CommandQueueing)));
 
             if (pStorageDeviceDescriptor->VendorIdOffset != 0)
             {
-                std::string VendorId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->VendorIdOffset));
-                addToMap(devAttrMap, VendorId);
+                devAttrSet.insert(cdi::attr::Attribute("VendorId", "Unique identifier for the device vendor.", rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->VendorIdOffset))));
             }
 
             if (pStorageDeviceDescriptor->ProductIdOffset != 0)
             {
-                std::string ProductId = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductIdOffset));
-                addToMap(devAttrMap, ProductId);
+                devAttrSet.insert(cdi::attr::Attribute("ProductId", "Unique identifier for this product from the given vendor. Sometimes refered to as a \"model string\".", rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductIdOffset))));
             }
 
             if (pStorageDeviceDescriptor->ProductRevisionOffset != 0)
             {
-                std::string ProductRevision = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductRevisionOffset));
-                addToMap(devAttrMap, ProductRevision);
+                devAttrSet.insert(cdi::attr::Attribute("ProductRevision", "Unique identifier for the revision of host software on the device. Sometimes refered to as a \"firmware version\".", rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->ProductRevisionOffset))));
             }
 
             if (pStorageDeviceDescriptor->SerialNumberOffset != 0)
             {
-                std::string SerialNumber = rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->SerialNumberOffset + 1));
-                addToMap(devAttrMap, SerialNumber);
+                devAttrSet.insert(cdi::attr::Attribute("SerialNumber", "(Theoretically) Unique identifier for this particular build of this device with this firmware.", rTrim(std::string((char*)pStorageDeviceDescriptor + pStorageDeviceDescriptor->SerialNumberOffset))));
             }
 
-            std::string BusType = storageBusTypeToString(pStorageDeviceDescriptor->BusType);
-            addToMap(devAttrMap, BusType);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageDeviceDescriptor->BusType, sizeof(STORAGE_BUS_TYPE), "BusType", "Specifies the type of bus to which the device is connected.", storageBusTypeToString(pStorageDeviceDescriptor->BusType)));
 
             PSTORAGE_DEVICE_LAYOUT_SIGNATURE pStorageDeviceLayoutSignature = (PSTORAGE_DEVICE_LAYOUT_SIGNATURE)(b + pStorageDeviceUniqueIdentifer->DriveLayoutSignatureOffset);
             // If MBR give that info, otherwise give GPT GUID
             if (pStorageDeviceLayoutSignature->Mbr)
             {
-                std::string MbrSignature = std::to_string(pStorageDeviceLayoutSignature->DeviceSpecific.MbrSignature);
-                addToMap(devAttrMap, MbrSignature)
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageDeviceLayoutSignature->DeviceSpecific.MbrSignature, sizeof(ULONG), "MbrSignature", "Signature for the drive's master boot record (MBR).", std::to_string(pStorageDeviceLayoutSignature->DeviceSpecific.MbrSignature)));
             }
             else
             {
-                std::string GptDiskId = guidToString(pStorageDeviceLayoutSignature->DeviceSpecific.GptDiskId);
-                addToMap(devAttrMap, GptDiskId);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageDeviceLayoutSignature->DeviceSpecific.GptDiskId, sizeof(GUID), "GptDiskId", "Signature for the drive's GUID partition table (GPT).", guidToString(pStorageDeviceLayoutSignature->DeviceSpecific.GptDiskId)));
             }
 
             // Everything together... useful because a user can use CompareStorageDuids(...) to check for exact/sub matches
-            std::string StorageDUID = byteArrayToString(b, bytesReturned);
-            addToMap(devAttrMap, StorageDUID);
+            devAttrSet.insert(cdi::attr::Attribute(b, bytesReturned, "StorageDUID", "Storage device unique identifer. Can be used via WinApi to find this device uniquely via exact and sub matches.", byteArrayToString(b, bytesReturned)));
+
+            // Bus specific data
+            if (pStorageDeviceDescriptor->RawPropertiesLength > 0)
+            {
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageDeviceDescriptor->RawDeviceProperties, pStorageDeviceDescriptor->RawPropertiesLength, "BusSpecificRawProperties", "Bus specific property data.", byteArrayToString((BYTE*)&pStorageDeviceDescriptor->RawDeviceProperties, pStorageDeviceDescriptor->RawPropertiesLength)));
+            }
         }
 
+        // Another way to get manufacturer
         if (DeviceIoControl(handle, IOCTL_HID_GET_MANUFACTURER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string Manufacturer = wStringToString((wchar_t*)b);
-            addToMap(devAttrMap, Manufacturer);
+            devAttrSet.insert(cdi::attr::Attribute("Manufacturer", "The manufacturer of the device.", wStringToString((wchar_t*)b)));
         }
 
+        // FW / model string
         if (DeviceIoControl(handle, IOCTL_HID_GET_PRODUCT_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string ProductId = wStringToString((wchar_t*)b);
-            addToMap(devAttrMap, ProductId);
+            devAttrSet.insert(cdi::attr::Attribute("ProductId", "Unique identifier for this product from the given vendor. Sometimes refered to as a \"model string\".", wStringToString((wchar_t*)b)));
         }
 
+        // Serial number
         if (DeviceIoControl(handle, IOCTL_HID_GET_SERIALNUMBER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string SerialNumber = wStringToString((wchar_t*)b);
-            addToMap(devAttrMap, SerialNumber);
+            devAttrSet.insert(cdi::attr::Attribute("SerialNumber", "(Theoretically) Unique identifier for this particular build of this device with this firmware.", wStringToString((wchar_t*)b)));
         }
 
-        STORAGE_PREDICT_FAILURE storagePredictFailure = { 0 };
-        if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, &storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned > 0)
+        // SMART / failure prediction information
+        PSTORAGE_PREDICT_FAILURE storagePredictFailure = PSTORAGE_PREDICT_FAILURE(b);
+        if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string PredictFailure = toBoolString(storagePredictFailure.PredictFailure);
-            addToMap(devAttrMap, PredictFailure);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storagePredictFailure->PredictFailure, sizeof(BOOLEAN), "PredictFailure", "Using Self-Monitoring and Reporting Technology (SMART) data, a prediction as to if device failure is imminent.", toBoolString(storagePredictFailure->PredictFailure)));
 
             // Get SMART Thresholds
-            memset(&b, 0, sizeof(b));
-            PSENDCMDINPARAMS smartSendCmdParams = (PSENDCMDINPARAMS)b;
-            smartSendCmdParams->cBufferSize = sizeof(b);
+            PSENDCMDINPARAMS smartSendCmdParams = (PSENDCMDINPARAMS)b2;
+            smartSendCmdParams->cBufferSize = sizeof(b) / 2; // using secondary buffer
             IDEREGS ideRegs = { 0 };
             ideRegs.bFeaturesReg = READ_THRESHOLDS;
             ideRegs.bCylLowReg = SMART_CYL_LOW;
@@ -1363,13 +1338,14 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
             smartSendCmdParams->irDriveRegs = ideRegs;
             BYTE* smartThresholds = NULL;
 
-            if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 512)
+            if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b2 , smartSendCmdParams->cBufferSize, b2, smartSendCmdParams->cBufferSize, &bytesReturned, NULL) && bytesReturned > 512)
             {
                 // This math comes from the SMART Thresholds being in the last 512 bytes. Don't care about the rest.
-                smartThresholds = b + (bytesReturned - READ_THRESHOLD_BUFFER_SIZE);
+                smartThresholds = b2 + (bytesReturned - READ_THRESHOLD_BUFFER_SIZE);
             }
 
-            std::string SMARTData = smartToString((BYTE*)storagePredictFailure.VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, smartThresholds);
+            std::string SMARTData = smartToString((BYTE*)storagePredictFailure->VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, smartThresholds);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storagePredictFailure->VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, "SMARTData", "Self-Monitoring and Reporting Technology (SMART) data. Used to diagnose the state and potential for failure of a device.", SMARTData));
 
             // SMART Return Status (should say if a threshold exceeded condition)
             memset(&b, 0, sizeof(b));
@@ -1386,96 +1362,86 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
                 {
                     SMARTReturnStatus = "Threshold Exceeded Condition";
                 }
-                addToMap(devAttrMap, SMARTReturnStatus);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ideRegs, sizeof(IDEREGS), "SMARTReturnStatus", "Status determined via SMART metrics.", SMARTReturnStatus));
             }
-
-            addToMap(devAttrMap, SMARTData);
         }
 
-        DISK_GEOMETRY_EX diskGeoEx = { 0 };
-        if (DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, NULL, &diskGeoEx, sizeof(DISK_GEOMETRY_EX), &bytesReturned, NULL) && bytesReturned > 0)
+        // Another mechanism for getter disk length
+        PDISK_GEOMETRY_EX diskGeoEx = (PDISK_GEOMETRY_EX)b;
+        if (DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, NULL, diskGeoEx, sizeof(DISK_GEOMETRY_EX), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string DiskSize = std::to_string(diskGeoEx.DiskSize.QuadPart) + " Bytes" + " (" + std::to_string(diskGeoEx.DiskSize.QuadPart / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
-            addToMap(devAttrMap, DiskSize);
+            std::string DiskLength = std::to_string(diskGeoEx->DiskSize.QuadPart) + " Bytes" + " (" + std::to_string(diskGeoEx->DiskSize.QuadPart / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&diskGeoEx->DiskSize.QuadPart, sizeof(ULONGLONG), "DiskLength", "The size of the disk in bytes.", DiskLength));
         }
 
-        USB_HUB_CAPABILITIES_EX usbHubCapabilities = { 0 };
-        if (DeviceIoControl(handle, IOCTL_USB_GET_HUB_CAPABILITIES_EX, NULL, NULL, &usbHubCapabilities, sizeof(USB_HUB_CAPABILITIES_EX), &bytesReturned, NULL) && bytesReturned > 0)
+        // Gets the capabilities of the USB hub
+        PUSB_HUB_CAPABILITIES_EX usbHubCapabilities = (PUSB_HUB_CAPABILITIES_EX)b;
+        if (DeviceIoControl(handle, IOCTL_USB_GET_HUB_CAPABILITIES_EX, NULL, NULL, usbHubCapabilities, sizeof(USB_HUB_CAPABILITIES_EX), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string HubIsHighSpeedCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeedCapable);
-            addToMap(devAttrMap, HubIsHighSpeedCapable);
 
-            std::string HubIsHighSpeed = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsHighSpeed);
-            addToMap(devAttrMap, HubIsHighSpeed);
+            ULONG HubIsHighSpeedCapable = usbHubCapabilities->CapabilityFlags.HubIsHighSpeedCapable & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsHighSpeedCapable, sizeof(ULONG), "HubIsHighSpeedCapable", "Designates if the hub is capable of high speed USB (2.0 / 480 Mbits).", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsHighSpeedCapable)));
+            
+            ULONG HubIsHighSpeed = usbHubCapabilities->CapabilityFlags.HubIsHighSpeed & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsHighSpeed, sizeof(ULONG), "HubIsHighSpeed", "Designates if the hub is operating at high speed (~480 Mbits).", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsHighSpeed)));
 
-            std::string HubIsMultiTransactionCapable = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTtCapable);
-            addToMap(devAttrMap, HubIsMultiTransactionCapable);
+            ULONG HubIsMultiTransactionCapable = usbHubCapabilities->CapabilityFlags.HubIsMultiTtCapable & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsMultiTransactionCapable, sizeof(ULONG), "HubIsMultiTransactionCapable", "Designates if the hub is capable of doing multiple transactions/translations simultaneously.", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsMultiTtCapable)));
 
-            std::string HubIsMultiTransaction = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsMultiTt);
-            addToMap(devAttrMap, HubIsMultiTransaction);
+            ULONG HubIsMultiTransaction = usbHubCapabilities->CapabilityFlags.HubIsMultiTt & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsMultiTransaction, sizeof(ULONG), "HubIsMultiTransaction", "Designates if the hub is configured to do multiple transactions/translations simultaneously.", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsMultiTt)));
 
-            std::string HubIsRoot = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsRoot);
-            addToMap(devAttrMap, HubIsRoot);
+            ULONG HubIsRoot = usbHubCapabilities->CapabilityFlags.HubIsRoot & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsRoot, sizeof(ULONG), "HubIsRoot", "Designates if the hub is the root hub.", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsRoot)));
 
-            std::string HubIsArmedWakeOnConnect = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsArmedWakeOnConnect);
-            addToMap(devAttrMap, HubIsArmedWakeOnConnect);
+            ULONG HubIsArmedWakeOnConnect = usbHubCapabilities->CapabilityFlags.HubIsArmedWakeOnConnect & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsArmedWakeOnConnect, sizeof(ULONG), "HubIsArmedWakeOnConnect", "Designates if the hub is armed to wake when a device is connected to the hub.", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsArmedWakeOnConnect)));
 
-            std::string HubIsBusPowered = toBoolString(usbHubCapabilities.CapabilityFlags.HubIsBusPowered);
-            addToMap(devAttrMap, HubIsBusPowered);
+            ULONG HubIsBusPowered = usbHubCapabilities->CapabilityFlags.HubIsBusPowered & 1;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsBusPowered, sizeof(ULONG), "HubIsBusPowered", "Designates if the hub is bus-powered or self-powered.", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsBusPowered)));
         }
 
-        USB_NODE_INFORMATION usbNodeInfo;
-        memset(&usbNodeInfo, 0, sizeof(USB_NODE_INFORMATION));
+
+        PUSB_NODE_INFORMATION usbNodeInfo = (PUSB_NODE_INFORMATION)b;
+        memset(&b, 0, sizeof(USB_NODE_INFORMATION));
         // MSDN says to pass the USB_NODE_INFORMATION as input as well and set NodeType... I don't think it does anything on input... Also requesting more than 6 because it seems to pass with invalid data at 6.
-        if (DeviceIoControl(handle, IOCTL_USB_GET_NODE_INFORMATION, &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &usbNodeInfo, sizeof(USB_NODE_INFORMATION), &bytesReturned, NULL) && bytesReturned > 6)
+        if (DeviceIoControl(handle, IOCTL_USB_GET_NODE_INFORMATION, usbNodeInfo, sizeof(USB_NODE_INFORMATION), usbNodeInfo, sizeof(USB_NODE_INFORMATION), &bytesReturned, NULL) && bytesReturned > 6)
         {
-            if (usbNodeInfo.NodeType == UsbMIParent)
+            if (usbNodeInfo->NodeType == UsbMIParent)
             {
-                std::string ParentUSBNodeType = "UsbMiParent";
-                addToMap(devAttrMap, ParentUSBNodeType);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->NodeType, sizeof(USB_HUB_NODE), "ParentUSBNodeType", "The type of the parent USB device.", "UsbMiParent"));
 
-                std::string ParentNumberOfInterfaces = std::to_string(usbNodeInfo.u.MiParentInformation.NumberOfInterfaces);
-                addToMap(devAttrMap, ParentNumberOfInterfaces);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.MiParentInformation.NumberOfInterfaces, sizeof(ULONG), "ParentNumberOfInterfaces", "The number of interfaces on the composite device.", std::to_string(usbNodeInfo->u.MiParentInformation.NumberOfInterfaces)));
             }
-            else if (usbNodeInfo.NodeType == UsbHub)
+            else if (usbNodeInfo->NodeType == UsbHub)
             {
-                std::string ParentUSBNodeType = "UsbHub";
-                addToMap(devAttrMap, ParentUSBNodeType);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->NodeType, sizeof(USB_HUB_NODE), "ParentUSBNodeType", "The type of the parent USB device.", "UsbHub"));
 
-                std::string ParentNumberOfHubPorts = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bNumberOfPorts);
-                addToMap(devAttrMap, ParentNumberOfHubPorts);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.bNumberOfPorts, sizeof(UCHAR), "ParentNumberOfHubPorts", "The number of ports on the hub.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.bNumberOfPorts)));
 
                 // Apparently there is more info on this in the USB spec... possible todo: decode it.
-                std::string ParentHubCharacteristics = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.wHubCharacteristics);
-                addToMap(devAttrMap, ParentHubCharacteristics);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.wHubCharacteristics, sizeof(USHORT), "ParentHubCharacteristics", "The USB specification characteristics of the hub.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.wHubCharacteristics)));
 
                 // Number is in 2-ms intervals
-                std::string ParentHubTimeToPowerOn = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bPowerOnToPowerGood * 2) + " Milliseconds";
-                addToMap(devAttrMap, ParentHubTimeToPowerOn);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.bPowerOnToPowerGood, sizeof(UCHAR), "ParentHubTimeToPowerOn", "Time in 2 millisecond intervals that it takes for the device to power on completely.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.bPowerOnToPowerGood * 2) + " Milliseconds"));
 
                 // Number is in milliamperes
-                std::string ParentHubMaxCurrent = std::to_string(usbNodeInfo.u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes";
-                addToMap(devAttrMap, ParentHubMaxCurrent);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubDescriptor.bHubControlCurrent, sizeof(UCHAR), "ParentHubTimeToPowerOn", "Maximum power requirements for the hub's controller.", std::to_string(usbNodeInfo->u.HubInformation.HubDescriptor.bHubControlCurrent) + " Milliamperes"));
 
-                std::string ParentIsBusPowered = toBoolString(usbNodeInfo.u.HubInformation.HubIsBusPowered);
-                addToMap(devAttrMap, ParentIsBusPowered);
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&usbNodeInfo->u.HubInformation.HubIsBusPowered, sizeof(BOOLEAN), "ParentIsBusPowered", "Denotes if the parent is powered by the hub/bus or self-powered.", toBoolString(usbNodeInfo->u.HubInformation.HubIsBusPowered)));
             }
         }
 
-        memset(&b, 0, sizeof(b));
         PUSB_ROOT_HUB_NAME usbRootHubName = (PUSB_ROOT_HUB_NAME)b;
         if (DeviceIoControl(handle, IOCTL_USB_GET_ROOT_HUB_NAME, NULL, NULL, usbRootHubName, 1024, &bytesReturned, NULL) && bytesReturned > 0 && usbRootHubName->ActualLength > 0)
         {
-            std::string RootHubName = wStringToString(std::wstring((wchar_t*)usbRootHubName->RootHubName));
-            addToMap(devAttrMap, RootHubName);
+            devAttrSet.insert(cdi::attr::Attribute("RootHubName", "Symbolic name for the root hub.", wStringToString(std::wstring((wchar_t*)usbRootHubName->RootHubName))));
         }
 
-        memset(&b, 0, sizeof(b));
         PVOLUME_DISK_EXTENTS volumeDiskExtents = (PVOLUME_DISK_EXTENTS)b;
         if (DeviceIoControl(handle, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string NumberOfDiskExtents = std::to_string(volumeDiskExtents->NumberOfDiskExtents);
-            addToMap(devAttrMap, NumberOfDiskExtents);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&volumeDiskExtents->NumberOfDiskExtents, sizeof(DWORD), "NumberOfDiskExtents", "The number of disks in the given volume.", std::to_string(volumeDiskExtents->NumberOfDiskExtents)));
 
             DISK_EXTENT * thisExtent = volumeDiskExtents->Extents;
             for (size_t i = 0; i < volumeDiskExtents->NumberOfDiskExtents; i++)
@@ -1483,102 +1449,83 @@ AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std:
                 std::string DiskExtent = "Disk Number: " + std::to_string(thisExtent->DiskNumber) + "\n";
                 DiskExtent += "Starting Offset: Byte " + std::to_string(thisExtent->StartingOffset.QuadPart) + "\n";
                 DiskExtent += "Extent Length: " + std::to_string(thisExtent->ExtentLength.QuadPart) + " Bytes";
-                devAttrMap["DiskExtent" + std::to_string(i)] = DiskExtent;
+
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)thisExtent, sizeof(DISK_EXTENT), "DiskExtent" + std::to_string(i), "Information about a given disk and the extent of the current volume.", DiskExtent));
 
                 // Should do pointer math and move to the next extent
                 thisExtent++;
             }
         }
 
+        // Get file system information.
         if (DeviceIoControl(handle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
         {
             PNTFS_VOLUME_DATA_BUFFER p = (PNTFS_VOLUME_DATA_BUFFER)b;
 
-            std::string VolumeSerialNumber = std::to_string(p->VolumeSerialNumber.QuadPart);
-            addToMap(devAttrMap, VolumeSerialNumber);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->VolumeSerialNumber.QuadPart, sizeof(LARGE_INTEGER), "VolumeSerialNumber", "The serial number for the volume, assigned by the operating system when the disk is formatted.", std::to_string(p->VolumeSerialNumber.QuadPart)));
 
-            std::string NumberSectors = std::to_string(p->NumberSectors.QuadPart);
-            addToMap(devAttrMap, NumberSectors);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->NumberSectors.QuadPart, sizeof(LARGE_INTEGER), "NumberSectors", "The number of sectors in the specified volume.", std::to_string(p->NumberSectors.QuadPart)));
 
-            std::string TotalClusters = std::to_string(p->TotalClusters.QuadPart);
-            addToMap(devAttrMap, TotalClusters);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->TotalClusters.QuadPart, sizeof(LARGE_INTEGER), "TotalClusters", "The total number of clusters in the given volume.", std::to_string(p->TotalClusters.QuadPart)));
 
-            std::string FreeClusters = std::to_string(p->FreeClusters.QuadPart);
-            addToMap(devAttrMap, FreeClusters);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->FreeClusters.QuadPart, sizeof(LARGE_INTEGER), "FreeClusters", "The number of free clusters in the given volume.", std::to_string(p->FreeClusters.QuadPart)));
 
-            std::string TotalReserved = std::to_string(p->TotalReserved.QuadPart);
-            addToMap(devAttrMap, TotalReserved);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->TotalReserved.QuadPart, sizeof(LARGE_INTEGER), "TotalReserved", "The number of reserved clusters in the given volume.", std::to_string(p->TotalReserved.QuadPart)));
 
-            std::string BytesPerSector = std::to_string(p->BytesPerSector);
-            addToMap(devAttrMap, BytesPerSector);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->BytesPerSector, sizeof(DWORD), "BytesPerSector", "The number of bytes in a sector on the specified volume.", std::to_string(p->BytesPerSector)));
 
-            std::string BytesPerCluster = std::to_string(p->BytesPerCluster);
-            addToMap(devAttrMap, BytesPerCluster);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->BytesPerCluster, sizeof(DWORD), "BytesPerCluster", "The number of bytes in a cluster on the specified volume. This is also known as the cluster factor.", std::to_string(p->BytesPerCluster)));
 
-            std::string BytesPerFileRecordSegment = std::to_string(p->BytesPerFileRecordSegment);
-            addToMap(devAttrMap, BytesPerFileRecordSegment);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->BytesPerFileRecordSegment, sizeof(DWORD), "BytesPerFileRecordSegment", "The number of bytes in a file record segment.", std::to_string(p->BytesPerFileRecordSegment)));
 
-            std::string ClustersPerFileRecordSegment = std::to_string(p->ClustersPerFileRecordSegment);
-            addToMap(devAttrMap, ClustersPerFileRecordSegment);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->ClustersPerFileRecordSegment, sizeof(DWORD), "ClustersPerFileRecordSegment", "The number of clusters in a file record segment.", std::to_string(p->ClustersPerFileRecordSegment)));
 
-            std::string MftValidDataLength = std::to_string(p->MftValidDataLength.QuadPart);
-            addToMap(devAttrMap, MftValidDataLength);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->MftValidDataLength.QuadPart, sizeof(LARGE_INTEGER), "MftValidDataLength", "The length of the master file table, in bytes.", std::to_string(p->MftValidDataLength.QuadPart)));
 
-            std::string MftStartLcn = std::to_string(p->MftStartLcn.QuadPart);
-            addToMap(devAttrMap, MftStartLcn);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->MftStartLcn.QuadPart, sizeof(LARGE_INTEGER), "MftStartLcn", "The starting logical cluster number of the master file table.", std::to_string(p->MftStartLcn.QuadPart)));
 
-            std::string Mft2StartLcn = std::to_string(p->Mft2StartLcn.QuadPart);
-            addToMap(devAttrMap, Mft2StartLcn);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->Mft2StartLcn.QuadPart, sizeof(LARGE_INTEGER), "Mft2StartLcn", "The starting logical cluster number of the master file table mirror.", std::to_string(p->Mft2StartLcn.QuadPart)));
 
-            std::string MftZoneStart = std::to_string(p->MftZoneStart.QuadPart);
-            addToMap(devAttrMap, MftZoneStart);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->MftZoneStart.QuadPart, sizeof(LARGE_INTEGER), "MftZoneStart", "The starting logical cluster number of the master file table zone.", std::to_string(p->MftZoneStart.QuadPart)));
 
-            std::string MftZoneEnd = std::to_string(p->MftZoneEnd.QuadPart);
-            addToMap(devAttrMap, MftZoneEnd);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&p->MftZoneEnd.QuadPart, sizeof(LARGE_INTEGER), "MftZoneEnd", "The ending logical cluster number of the master file table zone.", std::to_string(p->MftZoneEnd.QuadPart)));
         }
 
         if (DeviceIoControl(handle, IOCTL_VOLUME_GET_GPT_ATTRIBUTES, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION p = (PVOLUME_GET_GPT_ATTRIBUTES_INFORMATION)b;
-
-            std::string GPTAttributes = gptAttributesToString(p->GptAttributes);
-            addToMap(devAttrMap, GPTAttributes);
+            PULONGLONG p = (PULONGLONG)b;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)b, sizeof(VOLUME_GET_GPT_ATTRIBUTES_INFORMATION), "GPTAttributes", "Attributes of the GUID Partition Table (GPT).", gptAttributesToString(*p)));
         }
 
         if (DeviceIoControl(handle, IOCTL_SERIAL_GET_COMMSTATUS, NULL, 0, b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
         {
             PULONG baud = (PULONG)b;
-            std::string BaudRate = std::to_string(*baud);
-            addToMap(devAttrMap, BaudRate);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)b, sizeof(ULONG), "BaudRate", "Various flags associated with the volume's file system.", std::to_string(*baud)));
         }
 
-        memset(&b, 0, sizeof(b));
         DWORD volumeSerialNumber = 0;
         DWORD maximumComponentLength = 0;
         DWORD fileSystemFlags = 0;
-        wchar_t fileSystemNameBuffer[4096] = { '\0' };
-        if (GetVolumeInformationByHandleW(handle, (LPWSTR)b, sizeof(b), &volumeSerialNumber, &maximumComponentLength, &fileSystemFlags, fileSystemNameBuffer, 4096))
+        DWORD fileSystemNameBufferSize = (sizeof(b) - 2048) / sizeof(wchar_t);
+        wchar_t* fileSystemNameBuffer = (wchar_t*)(b + 2048); //use the same buffer, just shift down rather far to avoid overlap
+        if (GetVolumeInformationByHandleW(handle, (LPWSTR)b, sizeof(b), &volumeSerialNumber, &maximumComponentLength, &fileSystemFlags, fileSystemNameBuffer, fileSystemNameBufferSize))
         {
-            std::string VolumeInformation = wStringToString(std::wstring((wchar_t*)b));
-            addToMap(devAttrMap, VolumeInformation);
+            devAttrSet.insert(cdi::attr::Attribute("VolumeInformation", "The name of the specified volume.", wStringToString((wchar_t*)b)));
 
-            std::string VolumeSerialNumber = std::to_string(volumeSerialNumber);
-            addToMap(devAttrMap, VolumeSerialNumber);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&volumeSerialNumber, sizeof(DWORD), "VolumeSerialNumber", "The serial number for the volume, assigned by the operating system when the disk is formatted.", std::to_string(volumeSerialNumber)));
 
-            std::string MaximumComponentLength = std::to_string(maximumComponentLength);
-            addToMap(devAttrMap, MaximumComponentLength);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&maximumComponentLength, sizeof(DWORD), "MaximumComponentLength", "The maximum length in wide characters the file name component of the volume's file system supports. This is the portion of a file name between backslashes.", std::to_string(maximumComponentLength)));
 
-            std::string FileSystemFlags = fileSystemFlagToString(fileSystemFlags);
-            addToMap(devAttrMap, FileSystemFlags);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemFlags, sizeof(DWORD), "FileSystemFlags", "Various flags associated with the volume's file system.", std::to_string(fileSystemFlags)));
 
-            std::string FileSystemName = wStringToString(std::wstring(fileSystemNameBuffer));
-            addToMap(devAttrMap, FileSystemName);
+            std::wstring FileSystemNameBuffer(fileSystemNameBuffer);
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemNameBuffer, FileSystemNameBuffer.size(), "FileSystemName", "The name of the type of file system.", wStringToString(FileSystemNameBuffer)));
         }
 
         CloseHandle(handle);
     }
 
-    return devAttrMap;
+    return devAttrSet;
 }
 
 std::map<std::string, std::string> getMsDosDeviceNameToDriveLetterMap()

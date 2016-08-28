@@ -7,6 +7,7 @@
 #pragma once
 
 // Local includes
+#include "Attribute.h"
 #include "Enumerations.h"
 #include "Registry.h"
 #include "Strings.h"
@@ -86,10 +87,10 @@ typedef std::map<std::string, UINT16> DeviceIdToScsiPortMap;
 // Possible aliases to SystemRoot
 #define SYSTEM_ROOT1 "\\SystemRoot\\System32"
 #define SYSTEM_ROOT2 "System32"
-// Take a map and add a given item. Use the name of the field as the key of the map.
-#define addToMap(map, itm) if (itm != UNAVAILABLE_ATTRIBUTE){map[#itm] = itm;}
 // Here to avoid warnings from importing ntddser.h
 #define IOCTL_SERIAL_GET_COMMSTATUS	0x1b006c
+
+#define ATTRWITHNAME(name) cdi::attr::Attribute(NULL, 0, name, "", "")
 
 // Get an HDEVINFO for all classes 
 HDEVINFO getAllClassesHDevInfo();
@@ -98,8 +99,8 @@ HDEVINFO getAllClassesHDevInfo();
 HDEVINFO getInterfaceHDevInfo(GUID classGuid);
 
 // Takes a complete HDEVINFO, specific device PSP_DEV_INFO_DATA, DWORD property and TYPE
-// The TYPE is used to return a string representation of the given property
-std::string getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD property, TYPE retType);
+// The TYPE is used to get a string representation of the given property
+bool getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD property, TYPE retType, std::string name, std::string description, cdi::attr::Attribute &attr);
 
 // Takes a complete HDEVINFO, corresponding SP_DEVINFO_DATA. Returns True if we are able
 //   to get driver information. If returning True, the PSP_DRVINFO_DATA is updated
@@ -108,42 +109,42 @@ bool getDriverInfoData(HDEVINFO devs, SP_DEVINFO_DATA devInfo, PSP_DRVINFO_DATA 
 // Gets the Device Id for the given DEVINST
 std::string getDeviceId(DEVINST &devInst);
 
-// Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns a map of string:string
+// Takes a complete HDEVINFO and SP_DEVINFO_DATA and returns an AttributeSet
 //   this is a collection of 'attributes'
-AttributeMap getDeviceAttributeMap(HDEVINFO devs, SP_DEVINFO_DATA devInfo, DeviceIdToScsiPortMap &deviceIdToScsiPortMap);
+cdi::attr::AttributeSet getDeviceAttributeSet(HDEVINFO devs, SP_DEVINFO_DATA devInfo, DeviceIdToScsiPortMap &deviceIdToScsiPortMap);
 
-// Goes through all DevNode Propertiy Keys and add missing properties to the AttributeMap
-void addOtherDevNodeProperties(AttributeMap &attributeMap, DEVINST devInst);
+// Goes through all DevNode Propertiy Keys and add missing properties to the AttributeSet
+void addOtherDevNodeProperties(cdi::attr::AttributeSet &attributeSet, DEVINST devInst);
 
-// Goes through all resouce descriptors for the device and adds their info to the AttributeMap
-void addDeviceConfigurationAndResources(AttributeMap &attributeMap, DEVINST devInst);
+// Goes through all resouce descriptors for the device and adds their info to the AttributeSet
+void addDeviceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet, DEVINST devInst);
 
-// Goes through all resouce descriptors for the interface and adds their info to the AttributeMap
-void addInterfaceConfigurationAndResources(AttributeMap &attributeMap);
+// Goes through all resouce descriptors for the interface and adds their info to the AttributeSet
+void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet);
 
 // Gets a vector of interfaces based on the given GUID. If the GUID is GUID_NULL, all DEVINTERFACE GUIDs will be used
-std::vector<AttributeMap> getInterfaceAttributeMap(GUID classGuid);
+std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid);
 
-// Gets a vector of all devices and their AttributeMaps
-std::vector<AttributeMap> getAllDevicesAttributeMap();
+// Gets a vector of all devices and their AttributeSets
+std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet();
 
 // Prints a given AttributeMap
-void printAttributeMap(AttributeMap &attrMap);
+void printAttributeSet(cdi::attr::AttributeSet &attrMap);
 
-// Gets a AttributeMap that has a matching key and value in it's AttributeMap
-AttributeMap getAttributeMapWith(std::string key, std::string value);
+// Gets a AttributeSet that has a matching key and value in it's AttributeSet
+cdi::attr::AttributeSet getAttributeSetWith(std::string key, std::string value);
 
-// Gets a DEVINST that has a matching key and value in it's AttributeMap
+// Gets a DEVINST that has a matching key and value in it's AttributeSet
 DEVINST getDevInstWith(std::string key, std::string value);
 
 // Gets a mapping from Device Id to SCSI Port
 DeviceIdToScsiPortMap getDeviceIdToScsiPortMap();
 
-// Merges two AttributeMaps. If anything differs adds on a new line
-AttributeMap &mergeAttributeMaps(AttributeMap &oldAMap, AttributeMap &newAMap);
+// Merges two AttributeSets. If anything differs adds on a new line
+cdi::attr::AttributeSet &mergeAttributeSets(cdi::attr::AttributeSet &oldSet, cdi::attr::AttributeSet &newSet);
 
 // Gets attributes via the DevicePath
-AttributeMap getAttributeMapFromDevicePath(std::string DevicePath, std::map<std::string, std::string> &msDosDeviceNameToDriveLetterMap);
+cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, std::map<std::string, std::string> &msDosDeviceNameToDriveLetterMap);
 
 // Gets a map from MSDosDeviceName to drive letter
 std::map<std::string, std::string> getMsDosDeviceNameToDriveLetterMap();

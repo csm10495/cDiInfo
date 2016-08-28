@@ -63,15 +63,15 @@ int main(int argc, char** argv)
     }
     else if (argc == 4 && std::string(argv[1]) == "-get")
     {
-        AttributeMap &deviceAttrMap = getAttributeMapWith(argv[2], argv[3]);
-        printAttributeMap(deviceAttrMap);
+        cdi::attr::AttributeSet &deviceAttrSet = getAttributeSetWith(argv[2], argv[3]);
+        printAttributeSet(deviceAttrSet);
     }
     else if (argc == 4 && std::string(argv[1]) == "-getAll")
     {
-        std::vector<AttributeMap> &attributeMaps = getAttributeMapsWith(argv[2], argv[3]);
-        for (auto i : attributeMaps)
+        std::vector<cdi::attr::AttributeSet> &attributeSets = getAttributeSetsWith(argv[2], argv[3]);
+        for (auto i : attributeSets)
         {
-            printAttributeMap(i);
+            printAttributeSet(i);
         }
     }
     else if (argc >= 4 && std::string(argv[1]) == "-getAllJust")
@@ -88,18 +88,18 @@ int main(int argc, char** argv)
             printf("Attributes of %s that match %s\n", argv[2], argv[3]);
         }
 
-        std::vector<AttributeMap> &matchingAttributeMaps = getAttributesWith(argv[2], argv[3], otherAttributes);
-        for (auto i : matchingAttributeMaps)
+        std::vector<cdi::attr::AttributeSet> &matchingAttributeSets = getAttributesWith(argv[2], argv[3], otherAttributes);
+        for (auto i : matchingAttributeSets)
         {
-            printAttributeMap(i);
+            printAttributeSet(i);
         }
     }
     else if (argc == 4 && std::string(argv[1]) == "-getAllWithout")
     {
-        std::vector<AttributeMap> &attributeMaps = getAttributeMapsWithout(argv[2], argv[3]);
-        for (auto i : attributeMaps)
+        std::vector<cdi::attr::AttributeSet> &attributeSets = getAttributeSetsWithout(argv[2], argv[3]);
+        for (auto i : attributeSets)
         {
-            printAttributeMap(i);
+            printAttributeSet(i);
         }
     }
     else

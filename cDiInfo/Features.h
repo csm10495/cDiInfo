@@ -33,11 +33,11 @@ std::vector<std::string> getEnumerators();
 // Get a vector of classes
 std::vector<std::string> getClasses();
 
-// Gets all AttributeMaps that have a matching key and value
-std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value);
+// Gets all AttributeSets that have a matching key and value
+std::vector<cdi::attr::AttributeSet> getAttributeSetsWith(std::string key, std::string value);
 
-// Gets all Attributes that have a matching key and value
-std::vector<AttributeMap> getAttributesWith(std::string key, std::string value, std::string alt);
+// Gets all AttributeSets that have a matching key and value
+std::vector<cdi::attr::AttributeSet> getAttributesWith(std::string key, std::string value, std::string alt);
 
-// Gets all AttributeMaps that don't have a matching key and value
-std::vector<AttributeMap> getAttributeMapsWithout(std::string key, std::string value);
+// Gets all AttributeSets that don't have a matching key and value
+std::vector<cdi::attr::AttributeSet> getAttributeSetsWithout(std::string key, std::string value);

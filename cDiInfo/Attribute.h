@@ -8,55 +8,87 @@
 // WinApi Includes
 #include <Windows.h>
 
+// STL Includes
+#include <memory>
+#include <set>
+
 namespace cdi
 {
-    // A generic attribute with a customizeable toString mechanism
-    class Attribute
+    namespace attr
     {
-    public:
-        // Constructor, takes a BYTE array/length. Also takes name, description, and final parsing
-        Attribute(BYTE* bytes, UINT64 length, std::string name, std::string description, std::string parsing);
+        // A generic attribute with a customizeable toString mechanism
+        class Attribute
+        {
+        public:
+            // Constructor, takes a BYTE array/length. Also takes name, description, and final parsing
+            Attribute(BYTE* bytes, UINT64 length, std::string name, std::string description, std::string parsing);
 
-        // Cheap constructor without name/description/parsing
-        Attribute(BYTE* bytes, UINT64 length);
+            // Constructor for strings. The idea being that bytes/length can be determined from the string parsing
+            Attribute(std::string name, std::string description, std::string parsing);
 
-        // Copy constructor
-        Attribute(const Attribute &other);
+            // Empty constructor
+            Attribute();
 
-        // Destructor, deletes the internal BytesRepresentation
-        ~Attribute();
+            // Copy constructor
+            Attribute(const Attribute &other);
 
-        // Predefine template
-        template <class T>
-        T getValue();
+            // Copy constructor, with the ability to add to parsing
+            Attribute(const Attribute &other, std::string addStr);
 
-        // Gets the name
-        std::string getName();
+            // Equals operator
+            Attribute &operator=(Attribute &other);
 
-        // Gets the description
-        std::string getDescription();
+            // Destructor, deletes the internal BytesRepresentation
+            ~Attribute();
 
-        // Gets the length of the internal byte representation
-        UINT64 getLength();
+            // Predefine template
+            template <class T>
+            T getValue();
 
-    private:
+            // Predefine const template
+            template <class T>
+            T getValue() const;
 
-        // The raw bytes representation
-        BYTE* BytesRepresentation = nullptr;
+            // Gets the name
+            std::string getName();
 
-        // The length of the byte array
-        UINT64 BytesRepresentationLength;
+            // Gets the name (const)
+            std::string getName() const;
 
-        // The name of the field
-        std::string Name;
+            // Gets the description
+            std::string getDescription();
 
-        // The description of the field
-        std::string Description;
+            // Gets the length of the internal byte representation
+            UINT64 getLength();
 
-        // The parsing of the field
-        std::string Parsing;
+        private:
 
-        // Throws an error if BytesRepresentation is nullptr
-        void checkForNullptr();
-    };
+            // The raw bytes representation
+            std::unique_ptr<BYTE[]> BytesRepresentation;
+
+            // The length of the byte array
+            UINT64 BytesRepresentationLength;
+
+            // The name of the field
+            std::string Name;
+
+            // The description of the field
+            std::string Description;
+
+            // The parsing of the field
+            std::string Parsing;
+
+            // Used to make an internal deep copy of everything
+            static void deepCopy(Attribute &to, const Attribute &from);
+        };
+
+        struct AttributeCompare
+        {
+            bool operator()(const Attribute &lhs, const Attribute &rhs);
+            bool operator()(const Attribute &lhs, const Attribute &rhs) const;
+        };
+
+        typedef std::set<Attribute, AttributeCompare> AttributeSet;
+
+    }
 }

@@ -77,10 +77,10 @@ STATUS enableDevice(DEVINST devInst)
 
 void printAllInfo()
 {
-    std::vector<AttributeMap> allDevsAttrMap = getAllDevicesAttributeMap();
+    std::vector<cdi::attr::AttributeSet> allDevsAttrMap = getAllDevicesAttributeSet();
     for (auto i : allDevsAttrMap)
     {
-        printAttributeMap(i);
+        printAttributeSet(i);
     }
 }
 
@@ -139,45 +139,49 @@ std::vector<std::string> getClasses()
     return classes;
 }
 
-std::vector<AttributeMap> getAttributeMapsWith(std::string key, std::string value)
+std::vector<cdi::attr::AttributeSet> getAttributeSetsWith(std::string key, std::string value)
 {
-    std::vector<AttributeMap> matchingAttributeMaps;
+    std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
 
-    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
-    for (auto &deviceAttrMap : devicesAttributeMap)
+    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+    for (auto &deviceAttrSet : devicesAttributeSet)
     {
-        auto itr = deviceAttrMap.find(key);
-        if (itr != deviceAttrMap.end())
+        auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+        if (itr != deviceAttrSet.end())
         {
-            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
             {
-                matchingAttributeMaps.push_back(deviceAttrMap);
+                matchingAttributeSets.push_back(deviceAttrSet);
             }
         }
     }
-    return matchingAttributeMaps;
+    return matchingAttributeSets;
 }
 
-std::vector<AttributeMap> getAttributesWith(std::string key, std::string value, std::string alt)
+std::vector<cdi::attr::AttributeSet> getAttributesWith(std::string key, std::string value, std::string alt)
 {
-    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
-    std::vector<AttributeMap> retAM;
+    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+    std::vector<cdi::attr::AttributeSet> retAS;
 
     std::vector<std::string> otherAttributeNames = split(alt, ',');
     // trim each string
     std::for_each(otherAttributeNames.begin(), otherAttributeNames.end(), trim);
 
-    for (AttributeMap &attributeMap : devicesAttributeMap)
+    for (cdi::attr::AttributeSet &attributeSet : devicesAttributeSet)
     {
-        AttributeMap inAM;
+        cdi::attr::AttributeSet inAS;
         
-        // make sure this attribute map has the key... if not continue
-        auto itr = attributeMap.find(key);
-        if (itr != attributeMap.end())
+        // make sure this attribute Set has the key... if not continue
+        auto itr = attributeSet.find(ATTRWITHNAME(key));
+        if (itr != attributeSet.end())
         {
-            if (SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
             {
-                inAM[itr->first] = attributeMap[itr->first];
+                inAS.insert(*itr);
+            }
+            else
+            {
+                continue;
             }
         }
         else
@@ -185,43 +189,43 @@ std::vector<AttributeMap> getAttributesWith(std::string key, std::string value, 
             continue;
         }
 
-        // go through each attribute, if it matches one of the otherAttributeNames, add it to the inAM
-        for (auto attribute : attributeMap)
+        // go through each attribute, if it matches one of the otherAttributeNames, add it to the inAS
+        for (auto attribute : attributeSet)
         {
             for (auto attributeName : otherAttributeNames)
             {
-                if (SymMatchString(attribute.first.c_str(), attributeName.c_str(), FALSE))
+                if (SymMatchString(attribute.getName().c_str(), attributeName.c_str(), FALSE))
                 {
-                    inAM[attribute.first] = attributeMap[attribute.first];
+                    inAS.insert(attribute);
                 }
             }
         }
 
-        retAM.push_back(inAM);
+        retAS.push_back(inAS);
     }
 
-    return retAM;
+    return retAS;
 }
 
-std::vector<AttributeMap> getAttributeMapsWithout(std::string key, std::string value)
+std::vector<cdi::attr::AttributeSet> getAttributeSetsWithout(std::string key, std::string value)
 {
-    std::vector<AttributeMap> matchingAttributeMaps;
+    std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
 
-    std::vector<AttributeMap> devicesAttributeMap = getAllDevicesAttributeMap();
-    for (auto &deviceAttrMap : devicesAttributeMap)
+    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+    for (auto &deviceAttrSet : devicesAttributeSet)
     {
-        auto itr = deviceAttrMap.find(key);
-        if (itr != deviceAttrMap.end())
+        auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+        if (itr != deviceAttrSet.end())
         {
-            if (!SymMatchString(itr->second.c_str(), value.c_str(), FALSE))
+            if (!SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
             {
-                matchingAttributeMaps.push_back(deviceAttrMap);
+                matchingAttributeSets.push_back(deviceAttrSet);
             }
         }
         else
         {
-            matchingAttributeMaps.push_back(deviceAttrMap);
+            matchingAttributeSets.push_back(deviceAttrSet);
         }
     }
-    return matchingAttributeMaps;
+    return matchingAttributeSets;
 }

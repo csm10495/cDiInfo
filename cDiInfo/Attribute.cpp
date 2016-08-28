@@ -8,7 +8,6 @@
 #include <Windows.h>
 
 // STL Includes
-#include <exception>
 #include <string>
 
 // Local Includes
@@ -21,186 +20,294 @@
 
 namespace cdi
 {
-    Attribute::Attribute(BYTE* bytes, UINT64 length, std::string name, std::string description, std::string parsing)
+    namespace attr
     {
-        if (BytesRepresentation != nullptr)
+        Attribute::Attribute(BYTE* bytes, UINT64 length, std::string name, std::string description, std::string parsing)
         {
-            throw std::exception("Unable to create Attribute because the BytesRepresentation is not pre-set to nullptr");
+            BytesRepresentation = std::make_unique<BYTE[]>(length);
+            BytesRepresentationLength = length;
+            Name = name;
+            Description = description;
+            Parsing = parsing;
+            memcpy_s(BytesRepresentation.get(), length, bytes, length);
         }
 
-        BytesRepresentation = new BYTE[length];
-        BytesRepresentationLength = length;
-        Name = name;
-        Description = description;
-        Parsing = parsing;
-        memcpy_s(BytesRepresentation, length, bytes, length);
-    }
-
-    Attribute::Attribute(BYTE* bytes, UINT64 length) : Attribute(bytes, length, UNNAMED_ATTRIBUTE, NO_DESCRIPTION, NO_PARSING)
-    {
-
-    }
-
-    Attribute::Attribute(const Attribute &other)
-    {
-        this->BytesRepresentation = new BYTE[other.BytesRepresentationLength];
-        this->BytesRepresentationLength = other.BytesRepresentationLength;
-        this->Description = other.Description;
-        this->Name = other.Name;
-        this->Parsing = other.Parsing;
-
-        memcpy_s(this->BytesRepresentation, this->BytesRepresentationLength, other.BytesRepresentation, other.BytesRepresentationLength);
-    }
-
-    Attribute::~Attribute()
-    {
-        if (BytesRepresentation != nullptr)
+        Attribute::Attribute(std::string name, std::string description, std::string parsing)
         {
-            delete[] BytesRepresentation;
-            BytesRepresentation = nullptr;
+            BytesRepresentation = std::make_unique<BYTE[]>(parsing.size());
+            BytesRepresentationLength = parsing.size();
+            Name = name;
+            Description = description;
+            Parsing = parsing;
+            memcpy_s(BytesRepresentation.get(), BytesRepresentationLength, parsing.c_str(), parsing.size());
         }
-    }
 
-    template <> char Attribute::getValue<char>()
-    {
-        checkForNullptr();
-        return *(char*)BytesRepresentation;
-    }
-
-    template <> char* Attribute::getValue<char*>()
-    {
-        checkForNullptr();
-        return (char*)BytesRepresentation;
-    }
-
-    template <> int Attribute::getValue<int>()
-    {
-        checkForNullptr();
-        return *(int*)BytesRepresentation;
-    }
-
-    template <> int* Attribute::getValue<int*>()
-    {
-        checkForNullptr();
-        return (int*)BytesRepresentation;
-    }
-
-    template <> long Attribute::getValue<long>()
-    {
-        checkForNullptr();
-        return *(long*)BytesRepresentation;
-    }
-
-    template <> long* Attribute::getValue<long*>()
-    {
-        checkForNullptr();
-        return (long*)BytesRepresentation;
-    }
-
-    template <> unsigned int Attribute::getValue<unsigned int>()
-    {
-        checkForNullptr();
-        return *(unsigned int*)BytesRepresentation;
-    }
-
-    template <> unsigned int* Attribute::getValue<unsigned int*>()
-    {
-        checkForNullptr();
-        return (unsigned int*)BytesRepresentation;
-    }
-
-    template <> unsigned long Attribute::getValue<unsigned long>()
-    {
-        checkForNullptr();
-        return *(unsigned long*)BytesRepresentation;
-    }
-
-    template <> unsigned long* Attribute::getValue<unsigned long*>()
-    {
-        checkForNullptr();
-        return (unsigned long*)BytesRepresentation;
-    }
-
-    template <> unsigned long long Attribute::getValue<unsigned long long>()
-    {
-        checkForNullptr();
-        return *(unsigned long long*)BytesRepresentation;
-    }
-
-    template <> unsigned long long* Attribute::getValue<unsigned long long*>()
-    {
-        checkForNullptr();
-        return (unsigned long long*)BytesRepresentation;
-    }
-
-    template <> long long Attribute::getValue<long long>()
-    {
-        checkForNullptr();
-        return *(long long*)BytesRepresentation;
-    }
-
-    template <> long long* Attribute::getValue<long long*>()
-    {
-        checkForNullptr();
-        return (long long*)BytesRepresentation;
-    }
-
-    template <> BYTE Attribute::getValue<BYTE>()
-    {
-        checkForNullptr();
-        return *(BYTE*)BytesRepresentation;
-    }
-
-    template <> BYTE* Attribute::getValue<BYTE*>()
-    {
-        checkForNullptr();
-        return BytesRepresentation;
-    }
-
-    template <> UINT16 Attribute::getValue<UINT16>()
-    {
-        checkForNullptr();
-        return *(UINT16*)BytesRepresentation;
-    }
-
-    template <> UINT16* Attribute::getValue<UINT16*>()
-    {
-        checkForNullptr();
-        return (UINT16*)BytesRepresentation;
-    }
-
-    template <> INT16 Attribute::getValue<INT16>()
-    {
-        checkForNullptr();
-        return *(INT16*)BytesRepresentation;
-    }
-
-    template <> std::string Attribute::getValue<std::string>()
-    {
-        return Parsing;
-    }
-
-    std::string Attribute::getName()
-    {
-        return Name;
-    }
-
-    std::string Attribute::getDescription()
-    {
-        return Description;
-    }
-
-    UINT64 Attribute::getLength()
-    {
-        return BytesRepresentationLength;
-    }
-
-    void Attribute::checkForNullptr()
-    {
-        if (BytesRepresentation == nullptr)
+        Attribute::Attribute(const Attribute &other)
         {
-            throw std::exception("BytesRepresentation is nullptr");
+            deepCopy(*this, other);
         }
-    }
 
+        Attribute::Attribute(const Attribute &other, std::string addStr)
+        {
+            deepCopy(*this, other);
+            this->Parsing = other.Parsing + addStr;
+        }
+
+        Attribute::Attribute()
+        {
+            this->BytesRepresentation = NULL;
+            this->BytesRepresentationLength = 0;
+            this->Description = NO_DESCRIPTION;
+            this->Name = UNNAMED_ATTRIBUTE;
+            this->Parsing = NO_PARSING;
+        }
+
+        Attribute &Attribute::operator=(Attribute &other)
+        {
+            deepCopy(*this, other);
+            return *this;
+        }
+
+        Attribute::~Attribute()
+        {
+            // unique_ptr takes care of this
+        }
+
+        template <> char Attribute::getValue<char>()
+        {
+            return *(char*)BytesRepresentation.get();
+        }
+
+        template <> char* Attribute::getValue<char*>()
+        {
+            return (char*)BytesRepresentation.get();
+        }
+
+        template <> int Attribute::getValue<int>()
+        {
+            return *(int*)BytesRepresentation.get();
+        }
+
+        template <> int* Attribute::getValue<int*>()
+        {
+            return (int*)BytesRepresentation.get();
+        }
+
+        template <> long Attribute::getValue<long>()
+        {
+            return *(long*)BytesRepresentation.get();
+        }
+
+        template <> long* Attribute::getValue<long*>()
+        {
+            return (long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned int Attribute::getValue<unsigned int>()
+        {
+            return *(unsigned int*)BytesRepresentation.get();
+        }
+
+        template <> unsigned int* Attribute::getValue<unsigned int*>()
+        {
+            return (unsigned int*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long Attribute::getValue<unsigned long>()
+        {
+            return *(unsigned long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long* Attribute::getValue<unsigned long*>()
+        {
+            return (unsigned long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long long Attribute::getValue<unsigned long long>()
+        {
+            return *(unsigned long long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long long* Attribute::getValue<unsigned long long*>()
+        {
+            return (unsigned long long*)BytesRepresentation.get();
+        }
+
+        template <> long long Attribute::getValue<long long>()
+        {
+            return *(long long*)BytesRepresentation.get();
+        }
+
+        template <> long long* Attribute::getValue<long long*>()
+        {
+            return (long long*)BytesRepresentation.get();
+        }
+
+        template <> BYTE Attribute::getValue<BYTE>()
+        {
+            return *(BYTE*)BytesRepresentation.get();
+        }
+
+        template <> BYTE* Attribute::getValue<BYTE*>()
+        {
+            return (BYTE*)BytesRepresentation.get();
+        }
+
+        template <> UINT16 Attribute::getValue<UINT16>()
+        {
+            return *(UINT16*)BytesRepresentation.get();
+        }
+
+        template <> UINT16* Attribute::getValue<UINT16*>()
+        {
+            return (UINT16*)BytesRepresentation.get();
+        }
+
+        template <> INT16 Attribute::getValue<INT16>()
+        {
+            return *(INT16*)BytesRepresentation.get();
+        }
+
+        template <> std::string Attribute::getValue<std::string>()
+        {
+            return Parsing;
+        }
+
+        template <> char Attribute::getValue<char>() const
+        {
+            return *(char*)BytesRepresentation.get();
+        }
+
+        template <> char* Attribute::getValue<char*>() const
+        {
+            return (char*)BytesRepresentation.get();
+        }
+
+        template <> int* Attribute::getValue<int*>() const
+        {
+            return (int*)BytesRepresentation.get();
+        }
+
+        template <> long Attribute::getValue<long>() const
+        {
+            return *(long*)BytesRepresentation.get();
+        }
+
+        template <> long* Attribute::getValue<long*>() const
+        {
+            return (long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned int Attribute::getValue<unsigned int>() const
+        {
+            return *(unsigned int*)BytesRepresentation.get();
+        }
+
+        template <> unsigned int* Attribute::getValue<unsigned int*>() const
+        {
+            return (unsigned int*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long Attribute::getValue<unsigned long>() const
+        {
+            return *(unsigned long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long* Attribute::getValue<unsigned long*>() const
+        {
+            return (unsigned long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long long Attribute::getValue<unsigned long long>() const
+        {
+            return *(unsigned long long*)BytesRepresentation.get();
+        }
+
+        template <> unsigned long long* Attribute::getValue<unsigned long long*>() const
+        {
+            return (unsigned long long*)BytesRepresentation.get();
+        }
+
+        template <> long long Attribute::getValue<long long>() const
+        {
+            return *(long long*)BytesRepresentation.get();
+        }
+
+        template <> long long* Attribute::getValue<long long*>() const
+        {
+            return (long long*)BytesRepresentation.get();
+        }
+
+        template <> BYTE Attribute::getValue<BYTE>() const
+        {
+            return *(BYTE*)BytesRepresentation.get();
+        }
+
+        template <> BYTE* Attribute::getValue<BYTE*>() const
+        {
+            return (BYTE*)BytesRepresentation.get();
+        }
+
+        template <> UINT16 Attribute::getValue<UINT16>() const
+        {
+            return *(UINT16*)BytesRepresentation.get();
+        }
+
+        template <> UINT16* Attribute::getValue<UINT16*>() const
+        {
+            return (UINT16*)BytesRepresentation.get();
+        }
+
+        template <> INT16 Attribute::getValue<INT16>() const
+        {
+            return *(INT16*)BytesRepresentation.get();
+        }
+
+        template <> std::string Attribute::getValue<std::string>() const
+        {
+            return Parsing;
+        }
+
+        std::string Attribute::getName()
+        {
+            return Name;
+        }
+
+        std::string Attribute::getName() const
+        {
+            return Name;
+        }
+
+        std::string Attribute::getDescription()
+        {
+            return Description;
+        }
+
+        UINT64 Attribute::getLength()
+        {
+            return BytesRepresentationLength;
+        }
+
+        void Attribute::deepCopy(Attribute &to, const Attribute &from)
+        {
+            to.BytesRepresentation = std::make_unique<BYTE[]>(from.BytesRepresentationLength);
+            to.BytesRepresentationLength = from.BytesRepresentationLength;
+            to.Description = from.Description;
+            to.Name = from.Name;
+            to.Parsing = from.Parsing;
+
+            memcpy_s(to.BytesRepresentation.get(), to.BytesRepresentationLength, from.BytesRepresentation.get(), from.BytesRepresentationLength);
+        }
+
+        bool AttributeCompare::operator() (const Attribute &lhs, const Attribute &rhs)
+        {
+            return const_cast<Attribute*>(&lhs)->getName() <const_cast<Attribute*>(&rhs)->getName();
+        } 
+
+        bool AttributeCompare::operator() (const Attribute &lhs, const Attribute &rhs) const
+        {
+            return const_cast<Attribute*>(&lhs)->getName() <const_cast<Attribute*>(&rhs)->getName();
+        } 
+
+    }
 }

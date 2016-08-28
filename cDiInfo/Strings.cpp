@@ -7,6 +7,12 @@
 // Local includes
 #include "Strings.h"
 
+// WinApi Includes
+#include <SetupAPI.h>
+
+// Characters to trim 
+#define TRIM_CHARS " \n\r\t"
+
 std::string trim(std::string &s)
 {
     return lTrim(rTrim(s));
@@ -22,7 +28,6 @@ std::string& lTrim(std::string& s)
     }
 
     return s;
-
 }
 
 std::string &rTrim(std::string & s)
@@ -72,7 +77,7 @@ std::string guidToString(GUID guid)
     wchar_t guidCharArr[4096] = { 0 };
     StringFromGUID2(guid, guidCharArr, 4096);
     std::wstring asWStr = std::wstring(guidCharArr);
-    return std::string(asWStr.begin(), asWStr.end());
+    return toUpper(std::string(asWStr.begin(), asWStr.end()));
 }
 
 std::string cmProbToString(unsigned long problemNumber)
@@ -2256,7 +2261,7 @@ std::vector<std::string> split(std::string s, const char delim)
     token = strtok_s(cStr, &delim, &ptr);
     while (token)
     {
-        retVec.push_back(token);
+        retVec.push_back(std::string(token));
         token = strtok_s(NULL, &delim, &ptr);
     }
 
@@ -2576,4 +2581,86 @@ std::string fileSystemFlagToString(UINT32 flag)
         retStr = "No Flags";
     }
     return retStr;
+}
+
+namespace cdi
+{
+    namespace strings
+    {
+        std::string driverTypeToString(DWORD driverType)
+        {
+            std::string DriverType = "Unknown Driver Type";
+            if (driverType == SPDIT_CLASSDRIVER)
+            {
+                DriverType = "Class Driver";
+            }
+            else if (driverType == SPDIT_COMPATDRIVER)
+            {
+                DriverType = "Compatible Driver";
+            }
+            return DriverType;
+        }
+
+        std::string resourceTypeToDescription(RESOURCEID resourceType)
+        {
+            if (resourceType == 0)
+            {
+                return "All resource structures in list or requirement list form.";
+            }
+            if (resourceType == 1)
+            {
+                return "Memory resource structure specifying either a resource list or resource requirements list that describes memory usage for a device instance.";
+            }
+            if (resourceType == 2)
+            {
+                return "I/O resource structure specifying either a resource list or a resource requirements list that describes I/O port usage for a device instance.";
+            }
+            if (resourceType == 3)
+            {
+                return "DMA resource structure specifying either a resource list or a resource requirements list that describes DMA channel usage for a device instance.";
+            }
+            if (resourceType == 4)
+            {
+                return "Inturrupt request resource structure specifying either a resource list or a resource requirements list that describes IRQ line channel usage for a device instance.";
+            }
+            if (resourceType == 5)
+            {
+                return "Shouldn't be used...";
+            }
+            if (resourceType == 6)
+            {
+                return "Bus number resource structure specifying either a resource list or a resource requirements list that describes bus number channel usage for a device instance.";
+            }
+            if (resourceType == 7)
+            {
+                return "Large memory resource structure specifying either a resource list or resource requirements list that describes large memory usage for a device instance.";
+            }
+            if (resourceType == 0x00008000)
+            {
+                return "Ignored resource.";
+            }
+            if (resourceType == 0x0000FFFF)
+            {
+                return "Structure describing class-specific resource usage for a device instance.";
+            }
+            if (resourceType == 0x00008001)
+            {
+                return "Structure describing private-specific resource usage for a device instance.";
+            }
+            if (resourceType == 0x00008002)
+            {
+                return "Structure describing either a resource list or resource requirements list for a PC Card instance.";
+            }
+            if (resourceType == 0x00008003)
+            {
+                return "Structure describing either a resource list or resource requirements list for a multifunction device instance.";
+            }
+            if (resourceType == 0x00008004)
+            {
+                return "Connection resource.";
+            }
+
+            return "Unknown resource.";
+        }
+    }
 }
