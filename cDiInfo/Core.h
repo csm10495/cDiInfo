@@ -128,7 +128,7 @@ std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid);
 // Gets a vector of all devices and their AttributeSets
 std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet();
 
-// Prints a given AttributeMap
+// Prints a given AttributeSet
 void printAttributeSet(cdi::attr::AttributeSet &attrMap);
 
 // Gets a mapping from Device Id to SCSI Port

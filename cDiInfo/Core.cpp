@@ -1486,7 +1486,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
 
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&maximumComponentLength, sizeof(DWORD), "MaximumComponentLength", "The maximum length in wide characters the file name component of the volume's file system supports. This is the portion of a file name between backslashes.", std::to_string(maximumComponentLength)));
 
-            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemFlags, sizeof(DWORD), "FileSystemFlags", "Various flags associated with the volume's file system.", std::to_string(fileSystemFlags)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemFlags, sizeof(DWORD), "FileSystemFlags", "Various flags associated with the volume's file system.", cdi::strings::fileSystemFlagToString(fileSystemFlags)));
 
             std::wstring FileSystemNameBuffer(fileSystemNameBuffer);
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemNameBuffer, FileSystemNameBuffer.size(), "FileSystemName", "The name of the type of file system.", cdi::strings::wStringToString(FileSystemNameBuffer)));
