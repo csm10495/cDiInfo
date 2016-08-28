@@ -7,40 +7,48 @@
 // Local includes
 #include "Registry.h"
 
-bool getStringFromRegistry(HKEY hKey, std::string subKey, std::string value, std::string & output)
+namespace cdi
 {
-    DWORD size;
-    DWORD type;
-    LONG retVal = RegGetValue(hKey, subKey.c_str(), value.c_str(), RRF_RT_ANY, NULL, NULL, &size);
-
-    // For some reason this doesn't always work unless I add a bit (maybe for a null terminator?)
-    size = size + 1;
-    
-    if (retVal == ERROR_SUCCESS)
+    namespace registry
     {
-        char * allocatedString = new char[size];
-        retVal = RegGetValue(hKey, subKey.c_str(), value.c_str(), RRF_RT_ANY, &type, allocatedString, &size);
-
-        output = rTrim(std::string(allocatedString, size - 1));
-        delete[] allocatedString;
-
-        if (retVal == ERROR_SUCCESS)
+        bool getStringFromRegistry(HKEY hKey, std::string subKey, std::string value, std::string & output)
         {
-            return true;
+            DWORD size;
+            DWORD type;
+            LONG retVal = RegGetValue(hKey, subKey.c_str(), value.c_str(), RRF_RT_ANY, NULL, NULL, &size);
+
+            // For some reason this doesn't always work unless I add a bit (maybe for a null terminator?)
+            size = size + 1;
+
+            if (retVal == ERROR_SUCCESS)
+            {
+                char * allocatedString = new char[size];
+                retVal = RegGetValue(hKey, subKey.c_str(), value.c_str(), RRF_RT_ANY, &type, allocatedString, &size);
+
+                output = cdi::strings::rTrim(std::string(allocatedString, size - 1));
+                delete[] allocatedString;
+
+                if (retVal == ERROR_SUCCESS)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
-    }
 
-    return false;
+        bool getUIntFromRegistry(HKEY hkey, std::string subKey, std::string value, UINT64 &output)
+        {
+            std::string outString = "";
+            if (getStringFromRegistry(hkey, subKey, value, outString))
+            {
+                // Now we have a string, cast it back to UINT64
+                memcpy(&output, outString.data(), outString.size());
+                return true;
+            }
+            return false;
+        }
+
+    }
 }
 
-bool getUIntFromRegistry(HKEY hkey, std::string subKey, std::string value, UINT64 &output)
-{
-    std::string outString = "";
-    if (getStringFromRegistry(hkey, subKey, value, outString))
-    {
-        // Now we have a string, cast it back to UINT64
-        memcpy(&output, outString.data(), outString.size());
-        return true;
-    }
-    return false;
-}

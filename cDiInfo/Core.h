@@ -131,12 +131,6 @@ std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet();
 // Prints a given AttributeMap
 void printAttributeSet(cdi::attr::AttributeSet &attrMap);
 
-// Gets a AttributeSet that has a matching key and value in it's AttributeSet
-cdi::attr::AttributeSet getAttributeSetWith(std::string key, std::string value);
-
-// Gets a DEVINST that has a matching key and value in it's AttributeSet
-DEVINST getDevInstWith(std::string key, std::string value);
-
 // Gets a mapping from Device Id to SCSI Port
 DeviceIdToScsiPortMap getDeviceIdToScsiPortMap();
 

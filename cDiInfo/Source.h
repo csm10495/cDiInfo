@@ -5,14 +5,6 @@
 */
 #pragma once
 
-// Local Includes
-#include "Core.h"
-#include "Enumerations.h"
-#include "Features.h"
-#include "Registry.h"
-#include "Source.h"
-#include "Strings.h"
-
 // Prints usage information
 void printUsage(int argc, char** argv);
 

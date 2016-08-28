@@ -4,8 +4,13 @@
 * Source.cpp - Main source implementation file
 */
 
-// Local includes
+// Local Includes
+#include "Core.h"
+#include "Enumerations.h"
+#include "Features.h"
+#include "Registry.h"
 #include "Source.h"
+#include "Strings.h"
 
 // Prints usage information
 void printUsage(int argc, char** argv)
@@ -22,53 +27,65 @@ int main(int argc, char** argv)
     int returnCode = EXIT_SUCCESS;
     if (argc == 2 && std::string(argv[1]) == "-a")
     {
-        printAllInfo();
+        cdi::features::printAllInfo();
     }
     else if (argc == 2 && std::string(argv[1]) == "-keys")
     {
-        std::vector<std::string> &keys = getSampleAttributeKeys();
-        printVectorOfStrings(keys, "Possible Attribute Map Keys: (Remember, not all devices have all of these)", false);
+        std::vector<std::string> &keys = cdi::features::getSampleAttributeKeys();
+        cdi::features::printVectorOfStrings(keys, "Possible Attribute Map Keys: (Remember, not all devices have all of these)", false);
     }
     else if (argc == 2 && std::string(argv[1]) == "-enumerators")
     {
-        std::vector<std::string> &enumerators = getEnumerators();
-        printVectorOfStrings(enumerators, "Enumerators:", false);
+        std::vector<std::string> &enumerators = cdi::features::getEnumerators();
+        cdi::features::printVectorOfStrings(enumerators, "Enumerators:", false);
     }
     else if (argc == 2 && std::string(argv[1]) == "-classes")
     {
-        std::vector<std::string> &classes = getClasses();
-        printVectorOfStrings(classes, "Classes:", false);
+        std::vector<std::string> &classes = cdi::features::getClasses();
+        cdi::features::printVectorOfStrings(classes, "Classes:", false);
     }
     else if (argc == 4 && std::string(argv[1]) == "-disable")
     {
-        DEVINST devInst = getDevInstWith(argv[2], argv[3]);
-        STATUS s = disableDevice(devInst);
-        std::cout << getStatusStr(s) << std::endl;
+        DEVINST devInst = cdi::features::getDevInstWith(argv[2], argv[3]);
+        STATUS s = cdi::features::disableDevice(devInst);
+        std::cout << cdi::enums::getStatusStr(s) << std::endl;
+        if (s != STATUS::SUCCESS)
+        {
+            returnCode = EXIT_FAILURE;
+        }
     }
     else if (argc == 4 && std::string(argv[1]) == "-enable")
     {
-        DEVINST devInst = getDevInstWith(argv[2], argv[3]);
-        STATUS s = enableDevice(devInst);
-        std::cout << getStatusStr(s) << std::endl;
+        DEVINST devInst = cdi::features::getDevInstWith(argv[2], argv[3]);
+        STATUS s = cdi::features::enableDevice(devInst);
+        std::cout << cdi::enums::getStatusStr(s) << std::endl;
+        if (s != STATUS::SUCCESS)
+        {
+            returnCode = EXIT_FAILURE;
+        }
     }
     else if (argc == 4 && std::string(argv[1]) == "-restart")
     {
-        DEVINST devInst = getDevInstWith(argv[2], argv[3]);
-        STATUS s = disableDevice(devInst);
+        DEVINST devInst = cdi::features::getDevInstWith(argv[2], argv[3]);
+        STATUS s = cdi::features::disableDevice(devInst);
         if (s == STATUS::SUCCESS)
         {
-            s = enableDevice(devInst);
+            s = cdi::features::enableDevice(devInst);
         }
-        std::cout << getStatusStr(s) << std::endl;
+        std::cout << cdi::enums::getStatusStr(s) << std::endl;
+        if (s != STATUS::SUCCESS)
+        {
+            returnCode = EXIT_FAILURE;
+        }
     }
     else if (argc == 4 && std::string(argv[1]) == "-get")
     {
-        cdi::attr::AttributeSet &deviceAttrSet = getAttributeSetWith(argv[2], argv[3]);
+        cdi::attr::AttributeSet &deviceAttrSet = cdi::features::getAttributeSetWith(argv[2], argv[3]);
         printAttributeSet(deviceAttrSet);
     }
     else if (argc == 4 && std::string(argv[1]) == "-getAll")
     {
-        std::vector<cdi::attr::AttributeSet> &attributeSets = getAttributeSetsWith(argv[2], argv[3]);
+        std::vector<cdi::attr::AttributeSet> &attributeSets = cdi::features::getAttributeSetsWith(argv[2], argv[3]);
         for (auto i : attributeSets)
         {
             printAttributeSet(i);
@@ -88,7 +105,7 @@ int main(int argc, char** argv)
             printf("Attributes of %s that match %s\n", argv[2], argv[3]);
         }
 
-        std::vector<cdi::attr::AttributeSet> &matchingAttributeSets = getAttributesWith(argv[2], argv[3], otherAttributes);
+        std::vector<cdi::attr::AttributeSet> &matchingAttributeSets = cdi::features::getAttributesWith(argv[2], argv[3], otherAttributes);
         for (auto i : matchingAttributeSets)
         {
             printAttributeSet(i);
@@ -96,7 +113,7 @@ int main(int argc, char** argv)
     }
     else if (argc == 4 && std::string(argv[1]) == "-getAllWithout")
     {
-        std::vector<cdi::attr::AttributeSet> &attributeSets = getAttributeSetsWithout(argv[2], argv[3]);
+        std::vector<cdi::attr::AttributeSet> &attributeSets = cdi::features::getAttributeSetsWithout(argv[2], argv[3]);
         for (auto i : attributeSets)
         {
             printAttributeSet(i);

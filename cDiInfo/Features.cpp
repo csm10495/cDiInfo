@@ -5,227 +5,264 @@
 */
 
 // Local includes
+#include "Enumerations.h"
 #include "Features.h"
 
-std::vector<std::string> sampleAttributeKeys = {
-    "DeviceId",
-    "DeviceDesc",
-    "FriendlyName",
-    "HardwareId",
-    "Driver",
-    "Manufacturer",
-    "BusNumber",
-    "ChildrenDeviceIds",
-    "ParentDeviceId",
-    "SiblingDeviceIds",
-    "DriverDescription",
-    "DriverMfgName",
-    "ScsiAdapterPath",
-    "ScsiPortNumber",
-    "ScsiPathId",
-    "ScsiLun",
-    "ScsiTargetId",
-    "DevicePath",
-    "PhysicalDrivePath",
-    "MaximumTransferLength",
-    "DeviceHotplug",
-    "DiskLength",
-    "VendorId",
-    "ProductRevision",
-    "SerialNumber",
-};
-
-STATUS disableDevice(DEVINST devInst)
+namespace cdi
 {
-    if (devInst == NULL)
+    namespace features
     {
-        return FAILED_TO_GET_MATCHING_DEVINST;
-    }
+        const std::vector<std::string> sampleAttributeKeys = {
+            "DeviceId",
+            "DeviceDesc",
+            "FriendlyName",
+            "HardwareId",
+            "Driver",
+            "Manufacturer",
+            "BusNumber",
+            "ChildrenDeviceIds",
+            "ParentDeviceId",
+            "SiblingDeviceIds",
+            "DriverDescription",
+            "DriverMfgName",
+            "ScsiAdapterPath",
+            "ScsiPortNumber",
+            "ScsiPathId",
+            "ScsiLun",
+            "ScsiTargetId",
+            "DevicePath",
+            "PhysicalDrivePath",
+            "MaximumTransferLength",
+            "DeviceHotplug",
+            "DiskLength",
+            "VendorId",
+            "ProductRevision",
+            "SerialNumber",
+        };
 
-    DWORD cmRet = CM_Disable_DevNode(devInst, CM_DISABLE_UI_NOT_OK | CM_DISABLE_ABSOLUTE);
-
-    if (cmRet == CR_SUCCESS)
-    {
-        return SUCCESS;
-    }
-    else
-    {
-        std::cerr << "CM_Disable_DevNode(...) returned " << cmRet << " (" << cmRetValueToString(cmRet) << ")" << std::endl;
-        return CM_FAILED;
-    }
-}
-
-STATUS enableDevice(DEVINST devInst)
-{
-    if (devInst == NULL)
-    {
-        return FAILED_TO_GET_MATCHING_DEVINST;
-    }
-
-    DWORD cmRet = CM_Enable_DevNode(devInst, 0);
-
-    if (cmRet == CR_SUCCESS)
-    {
-        return SUCCESS;
-    }
-    else
-    {
-        std::cerr << "CM_Enable_DevNode(...) returned " << cmRet << " (" << cmRetValueToString(cmRet) << ")" << std::endl;
-        return CM_FAILED;
-    }
-}
-
-void printAllInfo()
-{
-    std::vector<cdi::attr::AttributeSet> allDevsAttrMap = getAllDevicesAttributeSet();
-    for (auto i : allDevsAttrMap)
-    {
-        printAttributeSet(i);
-    }
-}
-
-void printVectorOfStrings(std::vector<std::string>& vec, std::string title, bool printStars)
-{
-    printf("%s\n", title.c_str());
-    auto regex = std::regex("\n");
-    for (auto i : vec)
-    {
-        i = std::regex_replace(i, regex, "\n  ");
-        printf("%s\n", rTrim(i).c_str());
-        if (printStars)
+        STATUS disableDevice(DEVINST devInst)
         {
-            printf("\n*******************\n");
-        }
-    }
-}
-
-std::vector<std::string> getSampleAttributeKeys()
-{
-    return sampleAttributeKeys;
-}
-
-std::vector<std::string> getEnumerators()
-{
-    std::vector<std::string> enumerators;
-
-    for (ULONG i = 0; ;i++)
-    {
-        char buf[MAX_DEVICE_ID_LEN] = { '\0' };
-        ULONG bufLen = MAX_DEVICE_ID_LEN;
-        if (CM_Enumerate_Enumerators(i, buf, &bufLen, 0) != CR_SUCCESS)
-        {
-            break;
-        }
-        enumerators.push_back(std::string(buf, bufLen));
-    }
-
-    return enumerators;
-}
-
-std::vector<std::string> getClasses()
-{
-    std::vector<std::string> classes;
-
-    for (ULONG i = 0; ;i++)
-    {
-        GUID guid;
-        if (CM_Enumerate_Classes(i, &guid, 0) != CR_SUCCESS)
-        {
-            break;
-        }
-        classes.push_back(guidToString(guid));
-    }
-
-    return classes;
-}
-
-std::vector<cdi::attr::AttributeSet> getAttributeSetsWith(std::string key, std::string value)
-{
-    std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
-
-    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
-    for (auto &deviceAttrSet : devicesAttributeSet)
-    {
-        auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
-        if (itr != deviceAttrSet.end())
-        {
-            if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+            if (devInst == NULL)
             {
-                matchingAttributeSets.push_back(deviceAttrSet);
+                return FAILED_TO_GET_MATCHING_DEVINST;
             }
-        }
-    }
-    return matchingAttributeSets;
-}
 
-std::vector<cdi::attr::AttributeSet> getAttributesWith(std::string key, std::string value, std::string alt)
-{
-    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
-    std::vector<cdi::attr::AttributeSet> retAS;
+            DWORD cmRet = CM_Disable_DevNode(devInst, CM_DISABLE_UI_NOT_OK | CM_DISABLE_ABSOLUTE);
 
-    std::vector<std::string> otherAttributeNames = split(alt, ',');
-    // trim each string
-    std::for_each(otherAttributeNames.begin(), otherAttributeNames.end(), trim);
-
-    for (cdi::attr::AttributeSet &attributeSet : devicesAttributeSet)
-    {
-        cdi::attr::AttributeSet inAS;
-        
-        // make sure this attribute Set has the key... if not continue
-        auto itr = attributeSet.find(ATTRWITHNAME(key));
-        if (itr != attributeSet.end())
-        {
-            if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+            if (cmRet == CR_SUCCESS)
             {
-                inAS.insert(*itr);
+                return SUCCESS;
             }
             else
             {
-                continue;
+                std::cerr << "CM_Disable_DevNode(...) returned " << cmRet << " (" << cdi::strings::cmRetValueToString(cmRet) << ")" << std::endl;
+                return CM_FAILED;
             }
         }
-        else
+
+        STATUS enableDevice(DEVINST devInst)
         {
-            continue;
+            if (devInst == NULL)
+            {
+                return FAILED_TO_GET_MATCHING_DEVINST;
+            }
+
+            DWORD cmRet = CM_Enable_DevNode(devInst, 0);
+
+            if (cmRet == CR_SUCCESS)
+            {
+                return SUCCESS;
+            }
+            else
+            {
+                std::cerr << "CM_Enable_DevNode(...) returned " << cmRet << " (" << cdi::strings::cmRetValueToString(cmRet) << ")" << std::endl;
+                return CM_FAILED;
+            }
         }
 
-        // go through each attribute, if it matches one of the otherAttributeNames, add it to the inAS
-        for (auto attribute : attributeSet)
+        void printAllInfo()
         {
-            for (auto attributeName : otherAttributeNames)
+            std::vector<cdi::attr::AttributeSet> allDevsAttrMap = getAllDevicesAttributeSet();
+            for (auto i : allDevsAttrMap)
             {
-                if (SymMatchString(attribute.getName().c_str(), attributeName.c_str(), FALSE))
+                printAttributeSet(i);
+            }
+        }
+
+        void printVectorOfStrings(std::vector<std::string>& vec, std::string title, bool printStars)
+        {
+            printf("%s\n", title.c_str());
+            auto regex = std::regex("\n");
+            for (auto i : vec)
+            {
+                i = std::regex_replace(i, regex, "\n  ");
+                printf("%s\n", cdi::strings::rTrim(i).c_str());
+                if (printStars)
                 {
-                    inAS.insert(attribute);
+                    printf("\n*******************\n");
                 }
             }
         }
 
-        retAS.push_back(inAS);
-    }
-
-    return retAS;
-}
-
-std::vector<cdi::attr::AttributeSet> getAttributeSetsWithout(std::string key, std::string value)
-{
-    std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
-
-    std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
-    for (auto &deviceAttrSet : devicesAttributeSet)
-    {
-        auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
-        if (itr != deviceAttrSet.end())
+        std::vector<std::string> getSampleAttributeKeys()
         {
-            if (!SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+            return sampleAttributeKeys;
+        }
+
+        std::vector<std::string> getEnumerators()
+        {
+            std::vector<std::string> enumerators;
+
+            for (ULONG i = 0; ;i++)
             {
-                matchingAttributeSets.push_back(deviceAttrSet);
+                char buf[MAX_DEVICE_ID_LEN] = { '\0' };
+                ULONG bufLen = MAX_DEVICE_ID_LEN;
+                if (CM_Enumerate_Enumerators(i, buf, &bufLen, 0) != CR_SUCCESS)
+                {
+                    break;
+                }
+                enumerators.push_back(std::string(buf, bufLen));
             }
+
+            return enumerators;
         }
-        else
+
+        std::vector<std::string> getClasses()
         {
-            matchingAttributeSets.push_back(deviceAttrSet);
+            std::vector<std::string> classes;
+
+            for (ULONG i = 0; ;i++)
+            {
+                GUID guid;
+                if (CM_Enumerate_Classes(i, &guid, 0) != CR_SUCCESS)
+                {
+                    break;
+                }
+                classes.push_back(cdi::strings::guidToString(guid));
+            }
+
+            return classes;
+        }
+
+        std::vector<cdi::attr::AttributeSet> getAttributeSetsWith(std::string key, std::string value)
+        {
+            std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
+
+            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            for (auto &deviceAttrSet : devicesAttributeSet)
+            {
+                auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+                if (itr != deviceAttrSet.end())
+                {
+                    if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    {
+                        matchingAttributeSets.push_back(deviceAttrSet);
+                    }
+                }
+            }
+            return matchingAttributeSets;
+        }
+
+        std::vector<cdi::attr::AttributeSet> getAttributesWith(std::string key, std::string value, std::string alt)
+        {
+            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            std::vector<cdi::attr::AttributeSet> retAS;
+
+            std::vector<std::string> otherAttributeNames = cdi::strings::split(alt, ',');
+            // trim each string
+            std::for_each(otherAttributeNames.begin(), otherAttributeNames.end(), cdi::strings::trim);
+
+            for (cdi::attr::AttributeSet &attributeSet : devicesAttributeSet)
+            {
+                cdi::attr::AttributeSet inAS;
+
+                // make sure this attribute Set has the key... if not continue
+                auto itr = attributeSet.find(ATTRWITHNAME(key));
+                if (itr != attributeSet.end())
+                {
+                    if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    {
+                        inAS.insert(*itr);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+
+                // go through each attribute, if it matches one of the otherAttributeNames, add it to the inAS
+                for (auto attribute : attributeSet)
+                {
+                    for (auto attributeName : otherAttributeNames)
+                    {
+                        if (SymMatchString(attribute.getName().c_str(), attributeName.c_str(), FALSE))
+                        {
+                            inAS.insert(attribute);
+                        }
+                    }
+                }
+
+                retAS.push_back(inAS);
+            }
+
+            return retAS;
+        }
+
+        std::vector<cdi::attr::AttributeSet> getAttributeSetsWithout(std::string key, std::string value)
+        {
+            std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
+
+            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            for (auto &deviceAttrSet : devicesAttributeSet)
+            {
+                auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+                if (itr != deviceAttrSet.end())
+                {
+                    if (!SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    {
+                        matchingAttributeSets.push_back(deviceAttrSet);
+                    }
+                }
+                else
+                {
+                    matchingAttributeSets.push_back(deviceAttrSet);
+                }
+            }
+            return matchingAttributeSets;
+        }
+
+        DEVINST getDevInstWith(std::string key, std::string value)
+        {
+            cdi::attr::AttributeSet deviceAttrSet = getAttributeSetWith(key, value);
+            if (!deviceAttrSet.empty())
+            {
+                PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrSet.find(ATTRWITHNAME(DEVINFO_DATA_STRING))->getValue<BYTE*>();
+                return pDevInfoData->DevInst;
+            }
+            return NULL;
+        }
+
+        cdi::attr::AttributeSet getAttributeSetWith(std::string key, std::string value)
+        {
+            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            for (auto &deviceAttrSet : devicesAttributeSet)
+            {
+                auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+                if (itr != deviceAttrSet.end())
+                {
+                    if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    {
+                        return deviceAttrSet;
+                    }
+                }
+            }
+            return cdi::attr::AttributeSet();
         }
     }
-    return matchingAttributeSets;
 }
+
+

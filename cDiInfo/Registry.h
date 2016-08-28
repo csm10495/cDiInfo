@@ -18,8 +18,14 @@
 // Services folder
 #define REGISTRY_SERVICES "SYSTEM\\CurrentControlSet\\Services\\"
 
-// Gets a string from a given place in the registry
-bool getStringFromRegistry(HKEY hkey, std::string subKey, std::string value, std::string &output);
+namespace cdi
+{
+    namespace registry
+    {
+        // Gets a string from a given place in the registry
+        bool getStringFromRegistry(HKEY hkey, std::string subKey, std::string value, std::string &output);
 
-// Gets a numeric from a given place in the registry
-bool getUIntFromRegistry(HKEY hkey, std::string subKey, std::string value, UINT64 &output);
+        // Gets a numeric from a given place in the registry
+        bool getUIntFromRegistry(HKEY hkey, std::string subKey, std::string value, UINT64 &output);
+    }
+}

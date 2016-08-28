@@ -4,9 +4,6 @@
 * Attribute.cpp - Implementation file for the generic attribute type
 */
 
-// WinApi Includes
-#include <Windows.h>
-
 // STL Includes
 #include <string>
 
