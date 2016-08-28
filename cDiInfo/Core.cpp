@@ -1318,14 +1318,13 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storagePredictFailure->VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, "SMARTData", "Self-Monitoring and Reporting Technology (SMART) data. Used to diagnose the state and potential for failure of a device.", SMARTData));
 
             // SMART Return Status (should say if a threshold exceeded condition)
-            memset(&b, 0, sizeof(b));
             smartSendCmdParams->cBufferSize = sizeof(b);
             ideRegs.bFeaturesReg = RETURN_SMART_STATUS;
             ideRegs.bCylLowReg = SMART_CYL_LOW;
             ideRegs.bCylHighReg = SMART_CYL_HI;
             ideRegs.bCommandReg = SMART_CMD;
             smartSendCmdParams->irDriveRegs = ideRegs;
-            if (DeviceIoControl(handle, SMART_SEND_DRIVE_COMMAND, b, sizeof(b), b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+            if (DeviceIoControl(handle, SMART_SEND_DRIVE_COMMAND, b2, smartSendCmdParams->cBufferSize, b2, smartSendCmdParams->cBufferSize, &bytesReturned, NULL) && bytesReturned > 0)
             {
                 std::string SMARTReturnStatus = "Healthy";
                 if (ideRegs.bCylLowReg == BAD_SMART_LOW && ideRegs.bCylHighReg == BAD_SMART_HIGH)
