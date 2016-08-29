@@ -1,4 +1,5 @@
-# cDiInfo - Charles Machalow - MIT License - (C) 2016
+# cDiInfo 
+#### Charles Machalow - MIT License - (C) 2016
 An application to get information via the Windows SetupDi... APIs... and some other calls. 
 
 Usage options:
