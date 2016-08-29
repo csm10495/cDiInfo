@@ -35,6 +35,11 @@ namespace cdi
 
         }
 
+        Attribute::Attribute(std::string name, std::string description, std::wstring parsing) : Attribute((BYTE*)parsing.c_str(), parsing.size() * (ULONG)sizeof(wchar_t), name, description, cdi::strings::wStringToString(parsing))
+        {
+
+        }
+
         Attribute::Attribute(const Attribute &other)
         {
             deepCopy(*this, other);

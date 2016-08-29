@@ -208,7 +208,15 @@ bool getDevInfoProperty(HDEVINFO &devs, PSP_DEVINFO_DATA devInfo, DWORD property
         std::string retStr = std::string(buffer, reqSize);
         if (retType == _INT_)
         {
-            attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, std::to_string(*(DWORD*)retStr.c_str()));
+            if (reqSize == 1)
+                attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, std::to_string(*(uint8_t*)retStr.c_str()));
+            else if (reqSize == 2)
+                attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, std::to_string(*(uint16_t*)retStr.c_str()));
+            else if (reqSize == 4)
+                attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, std::to_string(*(uint32_t*)retStr.c_str()));
+            else // (reqSize == 8) <- In theory... 
+                attr = cdi::attr::Attribute((BYTE*)buffer, reqSize, name, description, std::to_string(*(uint64_t*)retStr.c_str()));
+
             return true;
         }
         else if (retType == __STRING_)
@@ -1252,19 +1260,19 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
         // Another way to get manufacturer
         if (DeviceIoControl(handle, IOCTL_HID_GET_MANUFACTURER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            devAttrSet.insert(cdi::attr::Attribute("Manufacturer", "The manufacturer of the device.", cdi::strings::wStringToString((wchar_t*)b)));
+            devAttrSet.insert(cdi::attr::Attribute("Manufacturer", "The manufacturer of the device.", (wchar_t*)b));
         }
 
         // FW / model string
         if (DeviceIoControl(handle, IOCTL_HID_GET_PRODUCT_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            devAttrSet.insert(cdi::attr::Attribute("ProductId", "Unique identifier for this product from the given vendor. Sometimes refered to as a \"model string\".", cdi::strings::wStringToString((wchar_t*)b)));
+            devAttrSet.insert(cdi::attr::Attribute("ProductId", "Unique identifier for this product from the given vendor. Sometimes refered to as a \"model string\".", (wchar_t*)b));
         }
 
         // Serial number
         if (DeviceIoControl(handle, IOCTL_HID_GET_SERIALNUMBER_STRING, NULL, NULL, b, 128, &bytesReturned, NULL) && bytesReturned > 0)
         {
-            devAttrSet.insert(cdi::attr::Attribute("SerialNumber", "(Theoretically) Unique identifier for this particular build of this device with this firmware.", cdi::strings::wStringToString((wchar_t*)b)));
+            devAttrSet.insert(cdi::attr::Attribute("SerialNumber", "(Theoretically) Unique identifier for this particular build of this device with this firmware.", (wchar_t*)b));
         }
 
         // SMART / failure prediction information
@@ -1284,7 +1292,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             smartSendCmdParams->irDriveRegs = ideRegs;
             BYTE* smartThresholds = NULL;
 
-            if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b2 , smartSendCmdParams->cBufferSize, b2, smartSendCmdParams->cBufferSize, &bytesReturned, NULL) && bytesReturned > 512)
+            if (DeviceIoControl(handle, SMART_RCV_DRIVE_DATA, b2, smartSendCmdParams->cBufferSize, b2, smartSendCmdParams->cBufferSize, &bytesReturned, NULL) && bytesReturned > 512)
             {
                 // This math comes from the SMART Thresholds being in the last 512 bytes. Don't care about the rest.
                 smartThresholds = b2 + (bytesReturned - READ_THRESHOLD_BUFFER_SIZE);
@@ -1326,7 +1334,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
 
             ULONG HubIsHighSpeedCapable = usbHubCapabilities->CapabilityFlags.HubIsHighSpeedCapable & 1;
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsHighSpeedCapable, sizeof(ULONG), "HubIsHighSpeedCapable", "Designates if the hub is capable of high speed USB (2.0 / 480 Mbits).", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsHighSpeedCapable)));
-            
+
             ULONG HubIsHighSpeed = usbHubCapabilities->CapabilityFlags.HubIsHighSpeed & 1;
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&HubIsHighSpeed, sizeof(ULONG), "HubIsHighSpeed", "Designates if the hub is operating at high speed (~480 Mbits).", toBoolString(usbHubCapabilities->CapabilityFlags.HubIsHighSpeed)));
 
@@ -1380,7 +1388,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
         PUSB_ROOT_HUB_NAME usbRootHubName = (PUSB_ROOT_HUB_NAME)b;
         if (DeviceIoControl(handle, IOCTL_USB_GET_ROOT_HUB_NAME, NULL, NULL, usbRootHubName, 1024, &bytesReturned, NULL) && bytesReturned > 0 && usbRootHubName->ActualLength > 0)
         {
-            devAttrSet.insert(cdi::attr::Attribute("RootHubName", "Symbolic name for the root hub.", cdi::strings::wStringToString(std::wstring((wchar_t*)usbRootHubName->RootHubName))));
+            devAttrSet.insert(cdi::attr::Attribute("RootHubName", "Symbolic name for the root hub.", (wchar_t*)usbRootHubName->RootHubName));
         }
 
         PVOLUME_DISK_EXTENTS volumeDiskExtents = (PVOLUME_DISK_EXTENTS)b;
@@ -1455,7 +1463,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
         wchar_t* fileSystemNameBuffer = (wchar_t*)(b + 2048); //use the same buffer, just shift down rather far to avoid overlap
         if (GetVolumeInformationByHandleW(handle, (LPWSTR)b, sizeof(b), &volumeSerialNumber, &maximumComponentLength, &fileSystemFlags, fileSystemNameBuffer, fileSystemNameBufferSize))
         {
-            devAttrSet.insert(cdi::attr::Attribute("VolumeInformation", "The name of the specified volume.", cdi::strings::wStringToString((wchar_t*)b)));
+            devAttrSet.insert(cdi::attr::Attribute("VolumeInformation", "The name of the specified volume.", (wchar_t*)b));
 
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&volumeSerialNumber, sizeof(DWORD), "VolumeSerialNumber", "The serial number for the volume, assigned by the operating system when the disk is formatted.", std::to_string(volumeSerialNumber)));
 
@@ -1463,8 +1471,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
 
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemFlags, sizeof(DWORD), "FileSystemFlags", "Various flags associated with the volume's file system.", cdi::strings::fileSystemFlagToString(fileSystemFlags)));
 
-            std::wstring FileSystemNameBuffer(fileSystemNameBuffer);
-            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&fileSystemNameBuffer, FileSystemNameBuffer.size(), "FileSystemName", "The name of the type of file system.", cdi::strings::wStringToString(FileSystemNameBuffer)));
+            devAttrSet.insert(cdi::attr::Attribute("FileSystemName", "The name of the type of file system.", fileSystemNameBuffer));
         }
 
         CloseHandle(handle);

@@ -27,6 +27,9 @@ namespace cdi
             // Constructor for strings. The idea being that bytes/length can be determined from the string parsing
             Attribute(std::string name, std::string description, std::string parsing);
 
+            // Constructor for wide strings. The idea being that bytes/length can be determined from the string parsing
+            Attribute(std::string name, std::string description, std::wstring parsing);
+
             // Empty constructor
             Attribute();
 
