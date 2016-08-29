@@ -92,7 +92,7 @@ namespace cdi
         typedef std::set<Attribute, AttributeCompare> AttributeSet;
         typedef std::vector<AttributeSet> AttributeSetVector;
 
-        // Attribute to XML
+        // Attribute to Xml
         std::string toXml(const Attribute &attr);
 
         // AttributeSet to Xml
