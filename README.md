@@ -30,7 +30,7 @@ cDiInfo.exe <-xml> -getAllWithout key value
     Looks for all devices with an attribute that doesn't has the given key and value
       then returns all information about it  
 
-cDiInfo.exe <-xml> -getAllJust key value <other,keys>
+cDiInfo.exe <-xml> -getAllJust key value (other,keys)
 
     Looks for all devices with an attribute that has the given key and value
       then returns that key/value and all optional keys and their values as well. 
