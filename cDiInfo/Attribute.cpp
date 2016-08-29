@@ -30,14 +30,9 @@ namespace cdi
             memcpy_s(BytesRepresentation.get(), length, bytes, length);
         }
 
-        Attribute::Attribute(std::string name, std::string description, std::string parsing)
+        Attribute::Attribute(std::string name, std::string description, std::string parsing) : Attribute((BYTE*)parsing.c_str(), parsing.size(), name, description, parsing)
         {
-            BytesRepresentation = std::make_unique<BYTE[]>(parsing.size());
-            BytesRepresentationLength = parsing.size();
-            Name = name;
-            Description = description;
-            Parsing = parsing;
-            memcpy_s(BytesRepresentation.get(), BytesRepresentationLength, parsing.c_str(), parsing.size());
+
         }
 
         Attribute::Attribute(const Attribute &other)
