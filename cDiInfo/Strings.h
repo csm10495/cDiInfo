@@ -130,6 +130,10 @@ namespace cdi
         // Converts driver type to string
         std::string driverTypeToString(DWORD driverType);
 
+        // Gets a description of the given RESOURCEID
         std::string resourceTypeToDescription(RESOURCEID resourceType);
+
+        // Gets an xml-safe representation of the inStr
+        std::string stringToXmlSafeStr(std::string inStr);
     }
 }

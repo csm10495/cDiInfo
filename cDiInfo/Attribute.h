@@ -11,6 +11,7 @@
 // STL Includes
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace cdi
 {
@@ -56,10 +57,10 @@ namespace cdi
             std::string getName() const;
 
             // Gets the description
-            std::string getDescription();
+            std::string getDescription() const;
 
             // Gets the length of the internal byte representation
-            UINT64 getLength();
+            UINT64 getLength() const;
 
         private:
 
@@ -89,6 +90,15 @@ namespace cdi
         };
 
         typedef std::set<Attribute, AttributeCompare> AttributeSet;
+        typedef std::vector<AttributeSet> AttributeSetVector;
 
+        // Attribute to XML
+        std::string toXml(const Attribute &attr);
+
+        // AttributeSet to Xml
+        std::string toXml(const AttributeSet &attrSet);
+
+        // AttributeSetVector to Xml
+        std::string toXml(const AttributeSetVector &attrSetVector);
     }
 }

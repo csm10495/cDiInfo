@@ -22,7 +22,7 @@ namespace cdi
         STATUS enableDevice(DEVINST devInst);
 
         // Prints everything we can get about every device
-        void printAllInfo();
+        void printAllInfo(bool useXml);
 
         // Prints a vector of strings with a title
         void printVectorOfStrings(std::vector<std::string> &vec, std::string title, bool printStars);
@@ -37,18 +37,24 @@ namespace cdi
         std::vector<std::string> getClasses();
 
         // Gets all AttributeSets that have a matching key and value
-        std::vector<cdi::attr::AttributeSet> getAttributeSetsWith(std::string key, std::string value);
+        cdi::attr::AttributeSetVector getAttributeSetsWith(std::string key, std::string value);
 
         // Gets all AttributeSets that have a matching key and value
-        std::vector<cdi::attr::AttributeSet> getAttributesWith(std::string key, std::string value, std::string alt);
+        cdi::attr::AttributeSetVector getAttributesWith(std::string key, std::string value, std::string alt);
 
         // Gets all AttributeSets that don't have a matching key and value
-        std::vector<cdi::attr::AttributeSet> getAttributeSetsWithout(std::string key, std::string value);
+        cdi::attr::AttributeSetVector getAttributeSetsWithout(std::string key, std::string value);
 
         // Gets a DEVINST that has a matching key and value in it's AttributeSet
         DEVINST getDevInstWith(std::string key, std::string value);
 
         // Gets a AttributeSet that has a matching key and value in it's AttributeSet
         cdi::attr::AttributeSet getAttributeSetWith(std::string key, std::string value);
+
+        // Prints a given AttributeSetVector
+        void printAttributeSetVector(cdi::attr::AttributeSetVector &attrSetVector, bool useXml);
+
+        // Prints a given AttributeSet
+        void printAttributeSet(cdi::attr::AttributeSet &attrSet, bool useXml);
     }
 }

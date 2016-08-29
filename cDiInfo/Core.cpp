@@ -445,7 +445,7 @@ cdi::attr::AttributeSet getDeviceAttributeSet(HDEVINFO devs, SP_DEVINFO_DATA dev
     // Try to save the SP_DEVINFO_DATA... a bit sketchy but works!
     std::string __devInfoDataString(sizeof(SP_DEVINFO_DATA), '0');
     memcpy((void*)__devInfoDataString.c_str(), &devInfo, sizeof(SP_DEVINFO_DATA));
-    devAttrSet.insert(cdi::attr::Attribute("__devInfoDataString", "A SP_DEVINFO_DATA structure for the given device instance.", __devInfoDataString));
+    devAttrSet.insert(cdi::attr::Attribute((BYTE*)__devInfoDataString.c_str(), __devInfoDataString.size(), "__devInfoDataString", "A SP_DEVINFO_DATA structure for the given device instance.", "No parsing available for this private structure."));
 
 
     // Get DevNode Property Keys
@@ -731,16 +731,16 @@ void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet
     delete[] propertyKeyArray;
 }
 
-std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid)
+cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
 {
-    std::vector<cdi::attr::AttributeSet> interfaces;
+    cdi::attr::AttributeSetVector interfaces;
 
     if (classGuid == GUID_NULL)
     {
 #ifdef MULTITHREADED
-        std::vector<std::future<std::vector<cdi::attr::AttributeSet>>> vectorFutureVectorOfAttributeSets;
+        std::vector<std::future<cdi::attr::AttributeSetVector>> vectorFutureVectorOfAttributeSets;
 #else // SINGLETHEADED
-        std::vector<std::vector<cdi::attr::AttributeSet>> vectorOfVectorOfAttributeSets;
+        std::vector<cdi::attr::AttributeSetVector> vectorOfVectorOfAttributeSets;
 #endif // SINGLETHEADED
         for (auto guid : ALL_GUIDS)
         {
@@ -754,12 +754,12 @@ std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid)
 
 #ifdef MULTITHREADED
         // join
-        for (std::future<std::vector<cdi::attr::AttributeSet>> &futureVectorOfAttributeSets : vectorFutureVectorOfAttributeSets)
+        for (std::future<cdi::attr::AttributeSetVector> &futureVectorOfAttributeSets : vectorFutureVectorOfAttributeSets)
         {
             for (cdi::attr::AttributeSet &attributeSet : futureVectorOfAttributeSets.get())
             {
 #else // SINGLETHEADED
-        for (std::vector<cdi::attr::AttributeSet> &vectorOfAttributeSets : vectorOfVectorOfAttributeSets)
+        for (cdi::attr::AttributeSetVector &vectorOfAttributeSets : vectorOfVectorOfAttributeSets)
         {
             for (cdi::attr::AttributeSet &attributeSet : vectorOfAttributeSets)
             {
@@ -791,7 +791,7 @@ std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid)
 
     if (interfaceDevs == INVALID_HANDLE_VALUE)
     {
-        return std::vector<cdi::attr::AttributeSet>();
+        return cdi::attr::AttributeSetVector();
     }
 
     SP_DEVINFO_DATA devInfo;
@@ -881,15 +881,15 @@ std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid)
     return interfaces;
 }
 
-std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet()
+cdi::attr::AttributeSetVector getAllDevicesAttributeSet()
 {
     HDEVINFO deviceDevs = getAllClassesHDevInfo();
 
     SP_DEVINFO_DATA devInfo;
     devInfo.cbSize = sizeof(SP_DEVINFO_DATA);
 
-    std::future<std::vector<cdi::attr::AttributeSet>> futureCompleteDevicesAttrSet;
-    std::vector<cdi::attr::AttributeSet> completeDevicesAttrSet;
+    std::future<cdi::attr::AttributeSetVector> futureCompleteDevicesAttrSet;
+    cdi::attr::AttributeSetVector completeDevicesAttrSet;
 
     DeviceIdToScsiPortMap deviceIdToScsiPortMap = getDeviceIdToScsiPortMap();
 
@@ -905,7 +905,7 @@ std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet()
         std::vector<std::future<cdi::attr::AttributeSet>> devAttrSetsToAdd;
 #else // SINGLETHREADED
         completeDevicesAttrSet = getInterfaceAttributeSet(GUID_NULL);
-        std::vector<cdi::attr::AttributeSet> devAttrSetsToAdd;
+        cdi::attr::AttributeSetVector devAttrSetsToAdd;
 #endif // SINGLETHREADED
 
         std::map<std::string, SP_DEVINFO_DATA> deviceIdToInfoData;
@@ -963,30 +963,6 @@ exit:
     }
 
     return completeDevicesAttrSet;
-}
-
-void printAttributeSet(cdi::attr::AttributeSet &attrMap)
-{
-    std::regex newlineRegex = std::regex("\n");
-    for (auto i : attrMap)
-    {
-        // Hide 'private' attributes
-        if (!cdi::strings::startsWith("__", i.getName(), true))
-        {
-            std::string value = i.getValue<std::string>();
-
-            std::string spaces = "                           ";
-            while (spaces.size() < i.getName().size() + 2)
-            {
-                spaces += " ";
-            }
-
-            value = std::regex_replace(value, newlineRegex, "\n" + spaces);
-
-            printf("%-25s: %s\n", i.getName().c_str(), value.c_str());
-        }
-    }
-    puts("*******************************************************");
 }
 
 DeviceIdToScsiPortMap getDeviceIdToScsiPortMap()

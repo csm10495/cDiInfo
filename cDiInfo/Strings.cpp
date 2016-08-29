@@ -2059,7 +2059,7 @@ namespace cdi
             else
             {
                 char charArray[7] = { "\0" };
-                snprintf(charArray, 7, "0x%X", (unsigned int)number);
+                snprintf(charArray, 7, "0x%0.*X", width, (unsigned int)number);
                 return std::string(charArray);
             }
         }
@@ -2684,6 +2684,39 @@ namespace cdi
             }
 
             return "Unknown resource.";
+        }
+
+        std::string stringToXmlSafeStr(std::string inStr)
+        {
+            std::string retStr = "";
+            for (unsigned char inChar : inStr)
+            {
+                if (inChar == '\"')
+                {
+                    retStr += "&quot;";
+                }
+                else if (inChar == '\'')
+                {
+                    retStr += "&apos;";
+                }
+                else if (inChar == '<')
+                {
+                    retStr += "&lt;";
+                }
+                else if (inChar == '>')
+                {
+                    retStr += "&gt;";
+                }
+                else if (inChar == '&')
+                {
+                    retStr += "&amp;";
+                }
+                else
+                {
+                    retStr += inChar;
+                }
+            }
+            return retStr;
         }
     }
 }

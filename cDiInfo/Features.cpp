@@ -80,13 +80,10 @@ namespace cdi
             }
         }
 
-        void printAllInfo()
+        void printAllInfo(bool useXml)
         {
-            std::vector<cdi::attr::AttributeSet> allDevsAttrMap = getAllDevicesAttributeSet();
-            for (auto i : allDevsAttrMap)
-            {
-                printAttributeSet(i);
-            }
+            cdi::attr::AttributeSetVector allDevsAttrSet = getAllDevicesAttributeSet();
+            printAttributeSetVector(allDevsAttrSet, useXml);
         }
 
         void printVectorOfStrings(std::vector<std::string>& vec, std::string title, bool printStars)
@@ -144,11 +141,11 @@ namespace cdi
             return classes;
         }
 
-        std::vector<cdi::attr::AttributeSet> getAttributeSetsWith(std::string key, std::string value)
+        cdi::attr::AttributeSetVector getAttributeSetsWith(std::string key, std::string value)
         {
-            std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
+            cdi::attr::AttributeSetVector matchingAttributeSets;
 
-            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
             for (auto &deviceAttrSet : devicesAttributeSet)
             {
                 auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
@@ -163,10 +160,10 @@ namespace cdi
             return matchingAttributeSets;
         }
 
-        std::vector<cdi::attr::AttributeSet> getAttributesWith(std::string key, std::string value, std::string alt)
+        cdi::attr::AttributeSetVector getAttributesWith(std::string key, std::string value, std::string alt)
         {
-            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
-            std::vector<cdi::attr::AttributeSet> retAS;
+            cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
+            cdi::attr::AttributeSetVector retAS;
 
             std::vector<std::string> otherAttributeNames = cdi::strings::split(alt, ',');
             // trim each string
@@ -212,11 +209,11 @@ namespace cdi
             return retAS;
         }
 
-        std::vector<cdi::attr::AttributeSet> getAttributeSetsWithout(std::string key, std::string value)
+        cdi::attr::AttributeSetVector getAttributeSetsWithout(std::string key, std::string value)
         {
-            std::vector<cdi::attr::AttributeSet> matchingAttributeSets;
+            cdi::attr::AttributeSetVector matchingAttributeSets;
 
-            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
             for (auto &deviceAttrSet : devicesAttributeSet)
             {
                 auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
@@ -248,7 +245,7 @@ namespace cdi
 
         cdi::attr::AttributeSet getAttributeSetWith(std::string key, std::string value)
         {
-            std::vector<cdi::attr::AttributeSet> devicesAttributeSet = getAllDevicesAttributeSet();
+            cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
             for (auto &deviceAttrSet : devicesAttributeSet)
             {
                 auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
@@ -261,6 +258,52 @@ namespace cdi
                 }
             }
             return cdi::attr::AttributeSet();
+        }
+
+        void printAttributeSetVector(cdi::attr::AttributeSetVector &attrSetVector, bool useXml)
+        {
+            if (useXml)
+            {
+                fprintf(stdout, "%s\n", cdi::attr::toXml(attrSetVector).c_str());
+            }
+            else
+            {
+                for (auto i : attrSetVector)
+                {
+                    printAttributeSet(i, useXml);
+                }
+            }
+        }
+
+        void printAttributeSet(cdi::attr::AttributeSet &attrSet, bool useXml)
+        {
+            if (useXml)
+            {
+                fprintf(stdout, "%s\n", cdi::attr::toXml(attrSet).c_str());
+            }
+            else
+            {
+                std::regex newlineRegex = std::regex("\n");
+                for (auto i : attrSet)
+                {
+                    // Hide 'private' attributes
+                    if (!cdi::strings::startsWith("__", i.getName(), true))
+                    {
+                        std::string value = i.getValue<std::string>();
+
+                        std::string spaces = "                           ";
+                        while (spaces.size() < i.getName().size() + 2)
+                        {
+                            spaces += " ";
+                        }
+
+                        value = std::regex_replace(value, newlineRegex, "\n" + spaces);
+
+                        printf("%-25s: %s\n", i.getName().c_str(), value.c_str());
+                    }
+                }
+                puts("*******************************************************");
+            }
         }
     }
 }

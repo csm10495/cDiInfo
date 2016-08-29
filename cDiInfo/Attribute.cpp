@@ -9,6 +9,7 @@
 
 // Local Includes
 #include "Attribute.h"
+#include "Strings.h"
 
 // #defines
 #define UNNAMED_ATTRIBUTE "Unnamed Attribute"
@@ -275,12 +276,12 @@ namespace cdi
             return Name;
         }
 
-        std::string Attribute::getDescription()
+        std::string Attribute::getDescription() const
         {
             return Description;
         }
 
-        UINT64 Attribute::getLength()
+        UINT64 Attribute::getLength() const
         {
             return BytesRepresentationLength;
         }
@@ -298,13 +299,56 @@ namespace cdi
 
         bool AttributeCompare::operator() (const Attribute &lhs, const Attribute &rhs)
         {
-            return const_cast<Attribute*>(&lhs)->getName() <const_cast<Attribute*>(&rhs)->getName();
-        } 
+            return const_cast<Attribute*>(&lhs)->getName() < const_cast<Attribute*>(&rhs)->getName();
+        }
 
         bool AttributeCompare::operator() (const Attribute &lhs, const Attribute &rhs) const
         {
-            return const_cast<Attribute*>(&lhs)->getName() <const_cast<Attribute*>(&rhs)->getName();
-        } 
+            return const_cast<Attribute*>(&lhs)->getName() < const_cast<Attribute*>(&rhs)->getName();
+        }
 
+        std::string toXml(const Attribute &attr)
+        {
+            std::string xml = "<Attribute>\n";
+
+            xml += "<name>" + cdi::strings::stringToXmlSafeStr(attr.getName()) + "</name>\n";
+            xml += "<description>" + cdi::strings::stringToXmlSafeStr(attr.getDescription()) + "</description>\n";
+            xml += "<parsing>" + cdi::strings::stringToXmlSafeStr(attr.getValue<std::string>()) + "</parsing>\n";
+            xml += "<bytes length=\"" + cdi::strings::stringToXmlSafeStr(std::to_string(attr.getLength())) + "\">";
+
+            //bytes to string
+            for (UINT64 i = 0; i < attr.getLength(); i++)
+            {
+                xml += cdi::strings::numToHexString(attr.getValue<BYTE*>()[i], 2).substr(2); // Remove 0x
+            }
+
+            xml += "</bytes>\n";
+
+            return xml + "</Attribute>";
+        }
+
+        std::string toXml(const AttributeSet &attrSet)
+        {
+            std::string xml = "<AttributeSet>\n";
+
+            for (const Attribute &attr : attrSet)
+            {
+                xml += toXml(attr);
+            }
+
+            return xml + "</AttributeSet>";
+        }
+
+        std::string toXml(const AttributeSetVector &attrSetVector)
+        {
+            std::string xml = "<AttributeSetVector>\n";
+
+            for (const AttributeSet &attrSet : attrSetVector)
+            {
+                xml += toXml(attrSet);
+            }
+
+            return xml + "</AttributeSetVector>";
+        }
     }
 }

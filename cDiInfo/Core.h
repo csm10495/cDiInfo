@@ -123,13 +123,10 @@ void addDeviceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet, D
 void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet);
 
 // Gets a vector of interfaces based on the given GUID. If the GUID is GUID_NULL, all DEVINTERFACE GUIDs will be used
-std::vector<cdi::attr::AttributeSet> getInterfaceAttributeSet(GUID classGuid);
+cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid);
 
 // Gets a vector of all devices and their AttributeSets
-std::vector<cdi::attr::AttributeSet> getAllDevicesAttributeSet();
-
-// Prints a given AttributeSet
-void printAttributeSet(cdi::attr::AttributeSet &attrMap);
+cdi::attr::AttributeSetVector getAllDevicesAttributeSet();
 
 // Gets a mapping from Device Id to SCSI Port
 DeviceIdToScsiPortMap getDeviceIdToScsiPortMap();

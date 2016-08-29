@@ -16,8 +16,9 @@
 void printUsage(int argc, char** argv)
 {
     std::cout << "cDiInfo: A program that gets information using the SetupDi... WinApi calls." << std::endl;
-    std::cout << "Usage: <cDiInfo> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | -getAll | -getAllJust | -getAllWithout] [<key> <value> (other,keys)]" << std::endl;
+    std::cout << "Usage: <cDiInfo> <-xml> [-a | -keys | -enumerators | -classes | -disable | -enable | -restart | -get | -getAll | -getAllJust | -getAllWithout] [<key> <value> (other,keys)]" << std::endl;
     std::cout << "Key and value used if applying to a specific device" << std::endl;
+    std::cout << "If -xml is given before another command, the data will be returned as XML if available. Otherwise a human-readable format is given." << std::endl;
     std::cout << "You gave " << argc << " arg(s)." << std::endl;
 }
 
@@ -25,28 +26,49 @@ void printUsage(int argc, char** argv)
 int main(int argc, char** argv)
 {
     int returnCode = EXIT_SUCCESS;
-    if (argc == 2 && std::string(argv[1]) == "-a")
+    bool useXml = false;
+
+    int arg1 = 1; //first arg (after xml if given)
+    int arg2 = 2;
+    int arg3 = 3;
+    int arg4 = 4; //fourth arg (after xml if given)
+    int arg5 = 5; //fifth arg (after xml if given)
+
+    if (argc > 1)
     {
-        cdi::features::printAllInfo();
+        if (std::string(argv[arg1]) == "-xml")
+        {
+            useXml = true;
+            arg1++;
+            arg2++;
+            arg3++;
+            arg4++;
+            arg5++;
+        }
     }
-    else if (argc == 2 && std::string(argv[1]) == "-keys")
+
+    if (argc >= 2 && std::string(argv[arg1]) == "-a")
+    {
+        cdi::features::printAllInfo(useXml);
+    }
+    else if (argc >= 2 && std::string(argv[arg1]) == "-keys")
     {
         std::vector<std::string> &keys = cdi::features::getSampleAttributeKeys();
         cdi::features::printVectorOfStrings(keys, "Possible Attribute Map Keys: (Remember, not all devices have all of these)", false);
     }
-    else if (argc == 2 && std::string(argv[1]) == "-enumerators")
+    else if (argc >= 2 && std::string(argv[arg1]) == "-enumerators")
     {
         std::vector<std::string> &enumerators = cdi::features::getEnumerators();
         cdi::features::printVectorOfStrings(enumerators, "Enumerators:", false);
     }
-    else if (argc == 2 && std::string(argv[1]) == "-classes")
+    else if (argc >= 2 && std::string(argv[arg1]) == "-classes")
     {
         std::vector<std::string> &classes = cdi::features::getClasses();
         cdi::features::printVectorOfStrings(classes, "Classes:", false);
     }
-    else if (argc == 4 && std::string(argv[1]) == "-disable")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-disable")
     {
-        DEVINST devInst = cdi::features::getDevInstWith(argv[2], argv[3]);
+        DEVINST devInst = cdi::features::getDevInstWith(argv[arg2], argv[arg3]);
         STATUS s = cdi::features::disableDevice(devInst);
         std::cout << cdi::enums::getStatusStr(s) << std::endl;
         if (s != STATUS::SUCCESS)
@@ -54,9 +76,9 @@ int main(int argc, char** argv)
             returnCode = EXIT_FAILURE;
         }
     }
-    else if (argc == 4 && std::string(argv[1]) == "-enable")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-enable")
     {
-        DEVINST devInst = cdi::features::getDevInstWith(argv[2], argv[3]);
+        DEVINST devInst = cdi::features::getDevInstWith(argv[arg2], argv[arg3]);
         STATUS s = cdi::features::enableDevice(devInst);
         std::cout << cdi::enums::getStatusStr(s) << std::endl;
         if (s != STATUS::SUCCESS)
@@ -64,9 +86,9 @@ int main(int argc, char** argv)
             returnCode = EXIT_FAILURE;
         }
     }
-    else if (argc == 4 && std::string(argv[1]) == "-restart")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-restart")
     {
-        DEVINST devInst = cdi::features::getDevInstWith(argv[2], argv[3]);
+        DEVINST devInst = cdi::features::getDevInstWith(argv[arg2], argv[arg3]);
         STATUS s = cdi::features::disableDevice(devInst);
         if (s == STATUS::SUCCESS)
         {
@@ -78,46 +100,36 @@ int main(int argc, char** argv)
             returnCode = EXIT_FAILURE;
         }
     }
-    else if (argc == 4 && std::string(argv[1]) == "-get")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-get")
     {
-        cdi::attr::AttributeSet &deviceAttrSet = cdi::features::getAttributeSetWith(argv[2], argv[3]);
-        printAttributeSet(deviceAttrSet);
+        cdi::attr::AttributeSet &deviceAttrSet = cdi::features::getAttributeSetWith(argv[arg2], argv[arg3]);
+        cdi::features::printAttributeSet(deviceAttrSet, useXml);
     }
-    else if (argc == 4 && std::string(argv[1]) == "-getAll")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-getAll")
     {
-        std::vector<cdi::attr::AttributeSet> &attributeSets = cdi::features::getAttributeSetsWith(argv[2], argv[3]);
-        for (auto i : attributeSets)
-        {
-            printAttributeSet(i);
-        }
+        cdi::attr::AttributeSetVector &attributeSets = cdi::features::getAttributeSetsWith(argv[arg2], argv[arg3]);
+        cdi::features::printAttributeSetVector(attributeSets, useXml);
     }
-    else if (argc >= 4 && std::string(argv[1]) == "-getAllJust")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-getAllJust")
     {
         // This is comma delimited
         std::string otherAttributes = "";
-        if (argc > 4)
+        if ((argc > 6 && useXml) || argc > 4)
         {
-            otherAttributes = argv[4];
-            printf("Attributes of %s that match %s and keys that match: %s\n", argv[2], argv[3], otherAttributes.c_str());
+            otherAttributes = std::string(argv[arg4]);
+            fprintf(stderr, "Getting attributes of %s that match %s and keys that match: %s\n", argv[arg2], argv[arg3], otherAttributes.c_str());
         }
         else
         {
-            printf("Attributes of %s that match %s\n", argv[2], argv[3]);
+            fprintf(stderr, "Getting attributes of %s that match %s\n", argv[arg2], argv[arg3]);
         }
-
-        std::vector<cdi::attr::AttributeSet> &matchingAttributeSets = cdi::features::getAttributesWith(argv[2], argv[3], otherAttributes);
-        for (auto i : matchingAttributeSets)
-        {
-            printAttributeSet(i);
-        }
+        cdi::attr::AttributeSetVector &matchingAttributeSets = cdi::features::getAttributesWith(argv[arg2], argv[arg3], otherAttributes);
+        cdi::features::printAttributeSetVector(matchingAttributeSets, useXml);
     }
-    else if (argc == 4 && std::string(argv[1]) == "-getAllWithout")
+    else if (argc >= 4 && std::string(argv[arg1]) == "-getAllWithout")
     {
-        std::vector<cdi::attr::AttributeSet> &attributeSets = cdi::features::getAttributeSetsWithout(argv[2], argv[3]);
-        for (auto i : attributeSets)
-        {
-            printAttributeSet(i);
-        }
+        cdi::attr::AttributeSetVector &attributeSets = cdi::features::getAttributeSetsWithout(argv[arg2], argv[arg3]);
+        cdi::features::printAttributeSetVector(attributeSets, useXml);
     }
     else
     {
