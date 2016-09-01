@@ -1474,6 +1474,47 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             devAttrSet.insert(cdi::attr::Attribute("FileSystemName", "The name of the type of file system.", fileSystemNameBuffer));
         }
 
+        // Get storage hw firmware information
+        PSTORAGE_HW_FIRMWARE_INFO_QUERY pStorageHwFirmwareInfoQuery = (PSTORAGE_HW_FIRMWARE_INFO_QUERY)b;
+        pStorageHwFirmwareInfoQuery->Version = sizeof(STORAGE_HW_FIRMWARE_INFO_QUERY);
+        pStorageHwFirmwareInfoQuery->Size = sizeof(STORAGE_HW_FIRMWARE_INFO_QUERY);
+        pStorageHwFirmwareInfoQuery->Flags = 0;
+        if (DeviceIoControl(handle, IOCTL_STORAGE_FIRMWARE_GET_INFO, &b, sizeof(STORAGE_HW_FIRMWARE_INFO_QUERY), &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            PSTORAGE_HW_FIRMWARE_INFO pStorageHwFirmwareInfo = (PSTORAGE_HW_FIRMWARE_INFO)b;
+            BYTE supportUpgrade = pStorageHwFirmwareInfo->SupportUpgrade;
+            devAttrSet.insert(cdi::attr::Attribute(&supportUpgrade, sizeof(BYTE), "FirmwareUpdateSupported", "Whether or not the controller supports updating the device firmware.", toBoolString(supportUpgrade)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->SlotCount, sizeof(UCHAR), "FirmwareSlotCount", "The number of slots for firmware to occupy on the device.", std::to_string(pStorageHwFirmwareInfo->SlotCount)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->ActiveSlot, sizeof(UCHAR), "FirmwareActiveSlot", "The slot whose firmware is active on the controller.", std::to_string(pStorageHwFirmwareInfo->ActiveSlot)));
+            
+            // If the value is the max possible, there is no slot pending activation
+            if (pStorageHwFirmwareInfo->PendingActivateSlot != (UCHAR)-1)
+            {
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->PendingActivateSlot, sizeof(UCHAR), "FirmwarePendingActiveSlot", "The slot whose firmware is pending to become active on the controller.", std::to_string(pStorageHwFirmwareInfo->PendingActivateSlot)));
+            }
+
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->FirmwareShared, sizeof(BOOLEAN), "FirmwareShared", "MSDN: \"Indicates that the firmware applies to both the device. For example, PCIe SSD.\" CSM: I think this means that FW is shared by the adapter and controller. So on an NVMe drive the \\\\.\\SCSI#: and \\\\.\\PHYSICALDRIVE# device's requests both go to the same FW.", toBoolString(pStorageHwFirmwareInfo->FirmwareShared)));
+            
+            // 0 means invalid
+            if (pStorageHwFirmwareInfo->ImagePayloadAlignment != 0)
+            {
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->ImagePayloadAlignment, sizeof(BOOLEAN), "FirmwareImagePayloadAlignment", "The alignment of the image payload used for a firmware update.", std::to_string(pStorageHwFirmwareInfo->ImagePayloadAlignment)));
+            }
+
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->ImagePayloadMaxSize, sizeof(BOOLEAN), "FirmwareImagePayloadMaxSize", "The maximum image payload size for a single transfer in the firmware update process.", std::to_string(pStorageHwFirmwareInfo->ImagePayloadMaxSize)));
+
+            int offsetToSlots = offsetof(STORAGE_HW_FIRMWARE_INFO, Slot);
+            for (size_t i = 0; i < pStorageHwFirmwareInfo->SlotCount; i++)
+            {
+                PSTORAGE_HW_FIRMWARE_SLOT_INFO pSlotInfo = (PSTORAGE_HW_FIRMWARE_SLOT_INFO)(b + offsetToSlots + (i * sizeof(STORAGE_HW_FIRMWARE_SLOT_INFO)));
+                std::string starter = "FirmwareSlot" + std::to_string(pSlotInfo->SlotNumber);
+                BYTE readOnly = pSlotInfo->ReadOnly;
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&readOnly, sizeof(BYTE), starter + "ReadOnly", "Indicates if the slot is read-only or not.", toBoolString(readOnly)));
+                std::string fwRev = std::string((char*)pSlotInfo->Revision).substr(0, STORAGE_HW_FIRMWARE_REVISION_LENGTH);
+                devAttrSet.insert(cdi::attr::Attribute(starter + "Revision", "The firmware revision number on the given slot.", fwRev));
+            }
+        }
+
         CloseHandle(handle);
     }
 
