@@ -1515,6 +1515,13 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             }
         }
 
+        if (DeviceIoControl(handle, IOCTL_DISK_PERFORMANCE, NULL, NULL, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0) // Enables performance metrics
+        {
+            PDISK_PERFORMANCE pPerf = (PDISK_PERFORMANCE)b;
+            devAttrSet.insert(cdi::attr::Attribute("StorageManagerName", "The name of the storage manager that controls the device.", std::wstring(pPerf->StorageManagerName)));
+            DeviceIoControl(handle, IOCTL_DISK_PERFORMANCE_OFF, NULL, NULL, NULL, NULL, &bytesReturned, NULL); // Disable performance metrics
+        }
+
         CloseHandle(handle);
     }
 
