@@ -1149,25 +1149,55 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
                 devAttrSet.insert(cdi::attr::Attribute((BYTE*)&scsiAddress->TargetId, sizeof(UCHAR), "ScsiTargetId", "SCSI Target Id. Often points to a specific device handler behind a specific path id behind the host bus (SCSI) adapter.", std::to_string(scsiAddress->TargetId)));
 
                 devAttrSet.insert(cdi::attr::Attribute((BYTE*)&scsiAddress->PortNumber, sizeof(UCHAR), "ScsiPortNumber", "SCSI Port Number. Often points to a specific host bus (SCSI) adapter.", std::to_string(scsiAddress->PortNumber)));
+            }
+        }
 
-                // Get IO_SCSI_CAPABILITIES... I think this may make more sense if sent to the adapter instead of device... :)
-                PIO_SCSI_CAPABILITIES ioScsiCapabilities = (PIO_SCSI_CAPABILITIES)b;
-                if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL) && bytesReturned > 0)
-                {
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->MaximumTransferLength, sizeof(ULONG), "MaximumTransferLength", "Maximum size, in bytes, of a single SCSI request block (SRB).", std::to_string(ioScsiCapabilities->MaximumTransferLength)));
+        // Get IO SCSI Capabilities... leaving this and other adapter specific IOCTLs here so they only will pass on the adapter device.
+        PIO_SCSI_CAPABILITIES ioScsiCapabilities = (PIO_SCSI_CAPABILITIES)b;
+        if (DeviceIoControl(handle, IOCTL_SCSI_GET_CAPABILITIES, NULL, 0, ioScsiCapabilities, sizeof(IO_SCSI_CAPABILITIES), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->MaximumTransferLength, sizeof(ULONG), "MaximumTransferLength", "Maximum size, in bytes, of a single SCSI request block (SRB).", std::to_string(ioScsiCapabilities->MaximumTransferLength)));
 
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->MaximumPhysicalPages, sizeof(ULONG), "MaximumPhysicalPages", "Maximum number of physical pages per data buffer.", std::to_string(ioScsiCapabilities->MaximumPhysicalPages)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->MaximumPhysicalPages, sizeof(ULONG), "MaximumPhysicalPages", "Maximum number of physical pages per data buffer.", std::to_string(ioScsiCapabilities->MaximumPhysicalPages)));
 
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->SupportedAsynchronousEvents, sizeof(ULONG), "SupportedAsynchronousEvents", "Whether or not the host adapter supports SCSI asynchronous receive-event operations.", toBoolString(ioScsiCapabilities->SupportedAsynchronousEvents)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->SupportedAsynchronousEvents, sizeof(ULONG), "SupportedAsynchronousEvents", "Whether or not the host adapter supports SCSI asynchronous receive-event operations.", toBoolString(ioScsiCapabilities->SupportedAsynchronousEvents)));
 
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AlignmentMask, sizeof(ULONG), "AlignmentMask", "The alignment mask for data transfers. Transfer data must be aligned on an address that is an integer multiple of this value.", std::to_string(ioScsiCapabilities->AlignmentMask)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AlignmentMask, sizeof(ULONG), "AlignmentMask", "The alignment mask for data transfers. Transfer data must be aligned on an address that is an integer multiple of this value.", std::to_string(ioScsiCapabilities->AlignmentMask)));
 
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->TaggedQueuing, sizeof(BOOLEAN), "TaggedQueuing", "Whether or not the device's host adapter supports tagged queuing.", toBoolString(ioScsiCapabilities->TaggedQueuing)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->TaggedQueuing, sizeof(BOOLEAN), "TaggedQueuing", "Whether or not the device's host adapter supports tagged queuing.", toBoolString(ioScsiCapabilities->TaggedQueuing)));
 
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AdapterScansDown, sizeof(BOOLEAN), "AdapterScansDown", "Whether or not the device's host adapter scans down for BIOS devices.", toBoolString(ioScsiCapabilities->AdapterScansDown)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AdapterScansDown, sizeof(BOOLEAN), "AdapterScansDown", "Whether or not the device's host adapter scans down for BIOS devices.", toBoolString(ioScsiCapabilities->AdapterScansDown)));
 
-                    devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AdapterUsesPio, sizeof(BOOLEAN), "AdapterUsesPio", "Whether or not the device's host adapter uses programmed I/O.", toBoolString(ioScsiCapabilities->AdapterUsesPio)));
-                }
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&ioScsiCapabilities->AdapterUsesPio, sizeof(BOOLEAN), "AdapterUsesPio", "Whether or not the device's host adapter uses programmed I/O.", toBoolString(ioScsiCapabilities->AdapterUsesPio)));
+        }
+
+        // Get SCSI Inquiry Data
+        if (DeviceIoControl(handle, IOCTL_SCSI_GET_INQUIRY_DATA, NULL, 0, &b, sizeof(b), &bytesReturned, NULL) && bytesReturned > 0)
+        {
+            PSCSI_ADAPTER_BUS_INFO pAdapterBusInfo = (PSCSI_ADAPTER_BUS_INFO)b;
+            PSCSI_BUS_DATA pBusData = pAdapterBusInfo->BusData;
+            PSCSI_INQUIRY_DATA pInquiryData;
+            int count = 0;
+            // The NumberOfBuses seems to be wrong when I have an RST RAID array. It reports 6 but only enumerates 4 inquiry datas (missing the 2 drives behind the array).
+            while (count < pAdapterBusInfo->NumberOfBuses && pBusData->InquiryDataOffset != 0) // 0 indicates no more inquiry data
+            {
+                pInquiryData = (PSCSI_INQUIRY_DATA)(b + pBusData->InquiryDataOffset);
+                PINQUIRYDATA pData = (PINQUIRYDATA)(pInquiryData->InquiryData);
+
+                std::string busInfoName = "ManagedDev" + std::to_string(count) + "_";
+
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pInquiryData->PathId, sizeof(UCHAR), busInfoName + "SCSIPathId", "The SCSI path id for the given managed device.", std::to_string(pInquiryData->PathId)));
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pInquiryData->TargetId, sizeof(UCHAR), busInfoName + "SCSITargetId", "The SCSI target id for the given managed device.", std::to_string(pInquiryData->TargetId)));
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pInquiryData->Lun, sizeof(UCHAR), busInfoName + "SCSITargetLun", "The SCSI logical unit number for the given managed device.", std::to_string(pInquiryData->Lun)));
+                devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pInquiryData->DeviceClaimed, sizeof(BOOLEAN), busInfoName + "ClaimedByClassDriver", "Determines if the device is claimed by a class driver.", toBoolString(pInquiryData->DeviceClaimed)));
+
+                devAttrSet.insert(cdi::attr::Attribute(busInfoName + "VendorId", "A unique identifer for the device vendor.", std::string((char*)pData->VendorId, 8)));
+                devAttrSet.insert(cdi::attr::Attribute(busInfoName + "ProductId", "A unique identifer for the given product.", std::string((char*)pData->ProductId, 16)));
+                devAttrSet.insert(cdi::attr::Attribute(busInfoName + "ProductRevisionLevel", "Usually a few characters (up to 4) of the firmware number.", std::string((char*)pData->ProductRevisionLevel, 4)));
+
+                // todo: more things in pData
+                pBusData++;
+                count++;
             }
         }
 
@@ -1486,7 +1516,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             devAttrSet.insert(cdi::attr::Attribute(&supportUpgrade, sizeof(BYTE), "FirmwareUpdateSupported", "Whether or not the controller supports updating the device firmware.", toBoolString(supportUpgrade)));
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->SlotCount, sizeof(UCHAR), "FirmwareSlotCount", "The number of slots for firmware to occupy on the device.", std::to_string(pStorageHwFirmwareInfo->SlotCount)));
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->ActiveSlot, sizeof(UCHAR), "FirmwareActiveSlot", "The slot whose firmware is active on the controller.", std::to_string(pStorageHwFirmwareInfo->ActiveSlot)));
-            
+
             // If the value is the max possible, there is no slot pending activation
             if (pStorageHwFirmwareInfo->PendingActivateSlot != (UCHAR)-1)
             {
@@ -1494,7 +1524,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             }
 
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&pStorageHwFirmwareInfo->FirmwareShared, sizeof(BOOLEAN), "FirmwareShared", "MSDN: \"Indicates that the firmware applies to both the device. For example, PCIe SSD.\" CSM: I think this means that FW is shared by the adapter and controller. So on an NVMe drive the \\\\.\\SCSI#: and \\\\.\\PHYSICALDRIVE# device's requests both go to the same FW.", toBoolString(pStorageHwFirmwareInfo->FirmwareShared)));
-            
+
             // 0 means invalid
             if (pStorageHwFirmwareInfo->ImagePayloadAlignment != 0)
             {

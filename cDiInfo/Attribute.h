@@ -22,7 +22,7 @@ namespace cdi
         {
         public:
             // Constructor, takes a BYTE array/length. Also takes name, description, and final parsing
-            Attribute(BYTE* bytes, UINT64 length, std::string name, std::string description, std::string parsing);
+            Attribute(BYTE* bytes, size_t length, std::string name, std::string description, std::string parsing);
 
             // Constructor for strings. The idea being that bytes/length can be determined from the string parsing
             Attribute(std::string name, std::string description, std::string parsing);
@@ -63,7 +63,7 @@ namespace cdi
             std::string getDescription() const;
 
             // Gets the length of the internal byte representation
-            UINT64 getLength() const;
+            size_t getLength() const;
 
         private:
 
@@ -71,7 +71,7 @@ namespace cdi
             std::unique_ptr<BYTE[]> BytesRepresentation;
 
             // The length of the byte array
-            UINT64 BytesRepresentationLength;
+            size_t BytesRepresentationLength;
 
             // The name of the field
             std::string Name;

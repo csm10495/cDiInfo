@@ -20,7 +20,7 @@ namespace cdi
 {
     namespace attr
     {
-        Attribute::Attribute(BYTE* bytes, UINT64 length, std::string name, std::string description, std::string parsing)
+        Attribute::Attribute(BYTE* bytes, size_t length, std::string name, std::string description, std::string parsing)
         {
             BytesRepresentation = std::make_unique<BYTE[]>(length);
             BytesRepresentationLength = length;
@@ -281,7 +281,7 @@ namespace cdi
             return Description;
         }
 
-        UINT64 Attribute::getLength() const
+        size_t Attribute::getLength() const
         {
             return BytesRepresentationLength;
         }

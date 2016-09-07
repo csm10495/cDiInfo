@@ -45,6 +45,8 @@
 #include <Ntddstor.h>
 #include <Ntddvdeo.h>
 #include <PortableDevice.h>
+#define _NTSCSI_USER_MODE_
+#include <scsi.h>
 #include <Sensors.h>
 #include <SetupAPI.h>
 #include <storduid.h>
