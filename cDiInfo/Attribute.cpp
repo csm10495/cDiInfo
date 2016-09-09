@@ -307,6 +307,29 @@ namespace cdi
             return const_cast<Attribute*>(&lhs)->getName() < const_cast<Attribute*>(&rhs)->getName();
         }
 
+        std::string getUniqueId(const AttributeSet &attrSet)
+        {
+            for (auto itr = attrSet.begin(); itr != attrSet.end(); itr++)
+            {
+                if (itr->getName() == "DeviceId")
+                {
+                    return itr->getValue<std::string>();
+                }
+            }
+
+            for (auto itr = attrSet.begin(); itr != attrSet.end(); itr++)
+            {
+                if (itr->getName() == "PseudoDeviceId")
+                {
+                    return itr->getValue<std::string>();
+                }
+            }
+
+            throw std::exception("Unable to find a unique id for given AttributeSet!");
+
+            return "";
+        }
+
         std::string toXml(const Attribute &attr)
         {
             std::string xml = "<Attribute>\n";

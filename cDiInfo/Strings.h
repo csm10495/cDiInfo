@@ -24,6 +24,9 @@
 #include <usbioctl.h>
 #undef INITGUID
 
+// Local includes
+#include "Include/csmisas.h"
+
 // Macro to get a bool string
 #define toBoolString(num) ((num) ? "True" : "False")
 
@@ -135,5 +138,14 @@ namespace cdi
 
         // Gets an xml-safe representation of the inStr
         std::string stringToXmlSafeStr(std::string inStr);
+
+        // Convert RAID/CSMI drive status to string
+        std::string csmiDriveStatusToString(int driveStatus);
+
+        // Convert RAID/CSMI drive usage to string
+        std::string csmiDriveUsageToString(int driveUsage);
+
+        // Convert RAID/CSMI drive type to string
+        std::string csmiDriveTypeToString(int driveType);
     }
 }

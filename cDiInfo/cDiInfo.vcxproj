@@ -171,6 +171,7 @@
   <ItemGroup>
     <ClCompile Include="Attribute.cpp" />
     <ClCompile Include="Core.cpp" />
+    <ClCompile Include="CSMI.cpp" />
     <ClCompile Include="Enumerations.cpp" />
     <ClCompile Include="Features.cpp" />
     <ClCompile Include="Registry.cpp" />
@@ -180,8 +181,10 @@
   <ItemGroup>
     <ClInclude Include="Attribute.h" />
     <ClInclude Include="Core.h" />
+    <ClInclude Include="CSMI.h" />
     <ClInclude Include="Enumerations.h" />
     <ClInclude Include="Features.h" />
+    <ClInclude Include="Include\csmisas.h" />
     <ClInclude Include="Registry.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Strings.h" />

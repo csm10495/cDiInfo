@@ -2718,5 +2718,87 @@ namespace cdi
             }
             return retStr;
         }
+
+        std::string csmiDriveStatusToString(int driveStatus)
+        {
+            if (driveStatus == CSMI_SAS_DRIVE_STATUS_OK)
+            {
+                return "CSMI_SAS_DRIVE_STATUS_OK";
+            }
+            if (driveStatus == CSMI_SAS_DRIVE_STATUS_REBUILDING)
+            {
+                return "CSMI_SAS_DRIVE_STATUS_REBUILDING";
+            }
+            if (driveStatus == CSMI_SAS_DRIVE_STATUS_FAILED)
+            {
+                return "CSMI_SAS_DRIVE_STATUS_FAILED";
+            }
+            if (driveStatus == CSMI_SAS_DRIVE_STATUS_DEGRADED)
+            {
+                return "CSMI_SAS_DRIVE_STATUS_DEGRADED";
+            }
+            if (driveStatus == CSMI_SAS_DRIVE_STATUS_OFFLINE)
+            {
+                return "CSMI_SAS_DRIVE_STATUS_OFFLINE";
+            }
+            if (driveStatus == CSMI_SAS_DRIVE_STATUS_QUEUED_FOR_REBUILD)
+            {
+                return "CSMI_SAS_DRIVE_STATUS_QUEUED_FOR_REBUILD";
+            }
+
+            return "Unknown Drive Status";
+        }
+
+        std::string csmiDriveUsageToString(int driveUsage)
+        {
+            if (driveUsage == CSMI_SAS_DRIVE_CONFIG_NOT_USED)
+            {
+                return "CSMI_SAS_DRIVE_CONFIG_NOT_USED";
+            }
+            if (driveUsage == CSMI_SAS_DRIVE_CONFIG_MEMBER)
+            {
+                return "CSMI_SAS_DRIVE_CONFIG_MEMBER";
+            }
+            if (driveUsage == CSMI_SAS_DRIVE_CONFIG_SPARE)
+            {
+                return "CSMI_SAS_DRIVE_CONFIG_SPARE";
+            }
+            if (driveUsage == CSMI_SAS_DRIVE_CONFIG_SPARE_ACTIVE)
+            {
+                return "CSMI_SAS_DRIVE_CONFIG_SPARE_ACTIVE";
+            }
+
+            return "Unknown Drive Usage";
+        }
+
+        std::string csmiDriveTypeToString(int driveType)
+        {
+            if (driveType == CSMI_SAS_DRIVE_TYPE_UNKNOWN)
+            {
+                return "CSMI_SAS_DRIVE_TYPE_UNKNOWN";
+            }
+            if (driveType == CSMI_SAS_DRIVE_TYPE_SINGLE_PORT_SAS)
+            {
+                return "CSMI_SAS_DRIVE_TYPE_SINGLE_PORT_SAS";
+            }
+            if (driveType == CSMI_SAS_DRIVE_TYPE_DUAL_PORT_SAS)
+            {
+                return "CSMI_SAS_DRIVE_TYPE_DUAL_PORT_SAS";
+            }
+            if (driveType == CSMI_SAS_DRIVE_TYPE_SATA)
+            {
+                return "CSMI_SAS_DRIVE_TYPE_SATA";
+            }
+            if (driveType == CSMI_SAS_DRIVE_TYPE_SATA_PS)
+            {
+                return "CSMI_SAS_DRIVE_TYPE_SATA_PS";
+            }
+            if (driveType == CSMI_SAS_DRIVE_TYPE_OTHER)
+            {
+                return "CSMI_SAS_DRIVE_TYPE_OTHER";
+            }
+
+            return "Unknown Drive Type";
+        }
     }
 }

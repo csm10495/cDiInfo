@@ -6,6 +6,7 @@
 
 // Local includes
 #include "Core.h"
+#include "CSMI.h"
 
 // #defines
 // Adds to the devAttrSet if getDevInfoProperty passes
@@ -775,7 +776,7 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
                 bool merged = false;
                 for (cdi::attr::AttributeSet &interfaceSet : interfaces)
                 {
-                    if (attributeSet.find(ATTRWITHNAME("DeviceId"))->getValue<std::string>() == interfaceSet.find(ATTRWITHNAME("DeviceId"))->getValue<std::string>())
+                    if (cdi::attr::getUniqueId(attributeSet) == cdi::attr::getUniqueId(interfaceSet))
                     {
                         attributeSet = mergeAttributeSets(interfaceSet, attributeSet);
                         merged = true;
@@ -858,6 +859,9 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
 
             cdi::attr::AttributeSet otherAttrSet = getAttributeSetFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
 
+            // Add CSMI... todo: explore multithreading if this is slow
+            cdi::attr::AttributeSetVector csmiDevices = cdi::detection::csmi::getCSMIDevices(DevicePath);
+
 #ifdef MULTITHREADED
             devAttrSet = mergeAttributeSets(futureDevAttrSet.get(), otherAttrSet);
 #else // SINGLETHREADED
@@ -868,6 +872,8 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
 
             interfaces.push_back(devAttrSet);
 
+            // Add in CSMI devices
+            interfaces.insert(interfaces.end(), csmiDevices.begin(), csmiDevices.end());
         }
 
         delete[] buffer;
@@ -933,7 +939,7 @@ cdi::attr::AttributeSetVector getAllDevicesAttributeSet()
             bool needToAdd = true;
             for (cdi::attr::AttributeSet &i : completeDevicesAttrSet)
             {
-                if (i.find(ATTRWITHNAME("DeviceId"))->getValue<std::string>() == dIAI.first)
+                if (cdi::attr::getUniqueId(i) == dIAI.first)
                 {
                     needToAdd = false;
                     break;

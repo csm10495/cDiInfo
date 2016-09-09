@@ -95,6 +95,9 @@ namespace cdi
         typedef std::set<Attribute, AttributeCompare> AttributeSet;
         typedef std::vector<AttributeSet> AttributeSetVector;
 
+        // Get Unique Id in AttributeSet
+        std::string getUniqueId(const AttributeSet &attrSet);
+
         // Attribute to Xml
         std::string toXml(const Attribute &attr);
 
