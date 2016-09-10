@@ -147,5 +147,14 @@ namespace cdi
 
         // Convert RAID/CSMI drive type to string
         std::string csmiDriveTypeToString(int driveType);
+
+        // Replaces over and over until the findStr is no longer in fullStr
+        std::string recursiveReplace(std::string fullStr, std::string findStr, std::string replaceStr);
+
+        // Convert CSMI IO Bus Type to string
+        std::string csmiIoBusTypeToString(int busType);
+
+        // Converts CSMI Controller flags to string
+        std::string csmiControllerFlagsToString(int flags);
     }
 }

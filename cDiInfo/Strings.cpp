@@ -2800,5 +2800,79 @@ namespace cdi
 
             return "Unknown Drive Type";
         }
+
+        std::string recursiveReplace(std::string fullStr, std::string findStr, std::string replaceStr)
+        {
+            if (replaceStr.find(findStr) != std::string::npos)
+            {
+                throw std::exception("Can't replace a string with a string containing the findStr.");
+            }
+
+            std::regex findRegex(findStr);
+            while (fullStr.find(findStr) != std::string::npos)
+            {
+                fullStr = std::regex_replace(fullStr, findRegex, replaceStr);
+            }
+
+            return fullStr;
+        }
+
+        std::string csmiIoBusTypeToString(int busType)
+        {
+            if (busType == CSMI_SAS_BUS_TYPE_PCI)
+            {
+                return "CSMI_SAS_BUS_TYPE_PCI";
+            }
+            if (busType == CSMI_SAS_BUS_TYPE_PCMCIA)
+            {
+                return "CSMI_SAS_BUS_TYPE_PCMCIA";
+            }
+
+            return "Unknwon Bus Type";
+        }
+
+        std::string csmiControllerFlagsToString(int flags)
+        {
+            std::string retStr = "";
+
+            if (flags & CSMI_SAS_CNTLR_SAS_HBA)
+            {
+                retStr += "(CSMI_SAS_CNTLR_SAS_HBA) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_SAS_RAID)
+            {
+                retStr += "(CSMI_SAS_CNTLR_SAS_RAID) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_SATA_HBA)
+            {
+                retStr += "(CSMI_SAS_CNTLR_SATA_HBA) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_SATA_RAID)
+            {
+                retStr += "(CSMI_SAS_CNTLR_SATA_RAID) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_FWD_SUPPORT)
+            {
+                retStr += "(CSMI_SAS_CNTLR_FWD_SUPPORT) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_FWD_ONLINE)
+            {
+                retStr += "(CSMI_SAS_CNTLR_FWD_ONLINE) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_FWD_SRESET)
+            {
+                retStr += "(CSMI_SAS_CNTLR_FWD_SRESET) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_FWD_HRESET)
+            {
+                retStr += "(CSMI_SAS_CNTLR_FWD_HRESET) ";
+            }
+            if (flags & CSMI_SAS_CNTLR_FWD_RROM)
+            {
+                retStr += "(CSMI_SAS_CNTLR_FWD_RROM) ";
+            }
+
+            return retStr;
+        }
     }
 }

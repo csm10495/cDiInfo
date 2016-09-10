@@ -1558,6 +1558,9 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
             DeviceIoControl(handle, IOCTL_DISK_PERFORMANCE_OFF, NULL, NULL, NULL, NULL, &bytesReturned, NULL); // Disable performance metrics
         }
 
+        // Add CSMI controller attributes
+        cdi::detection::csmi::addControllerCSMIAttributes(handle, devAttrSet);
+
         CloseHandle(handle);
     }
 

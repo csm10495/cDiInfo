@@ -25,6 +25,8 @@ namespace cdi
         namespace csmi
         {
             cdi::attr::AttributeSetVector getCSMIDevices(std::string devicePath);
+
+            void addControllerCSMIAttributes(HANDLE &handle, cdi::attr::AttributeSet &attributeSet);
         }
     }
 }
