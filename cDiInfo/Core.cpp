@@ -1336,7 +1336,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
 
             std::string SMARTData = cdi::strings::smartToString((BYTE*)storagePredictFailure->VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, smartThresholds);
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storagePredictFailure->VendorSpecific, READ_THRESHOLD_BUFFER_SIZE, "SMARTData", "Self-Monitoring and Reporting Technology (SMART) data. Used to diagnose the state and potential for failure of a device.", SMARTData));
-
+             
             // SMART Return Status (should say if a threshold exceeded condition)
             smartSendCmdParams->cBufferSize = sizeof(b);
             ideRegs.bFeaturesReg = RETURN_SMART_STATUS;

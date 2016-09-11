@@ -2874,5 +2874,65 @@ namespace cdi
 
             return retStr;
         }
+
+        std::string ataStringToString(std::string ataString)
+        {
+            if (ataString.size() % 2 != 0)
+            {
+                throw std::exception("ATA Strings must be evenly lengthed!");
+            }
+
+            // reserve size
+            std::string retStr = "";
+            retStr.reserve(ataString.size());
+
+            size_t i = 0;
+
+            while (i < ataString.size())
+            {
+                retStr += ataString[i + 1] + ataString[i];
+                i += 2;
+            }
+
+            return retStr;
+        }
+
+        std::string linkRateToString(int linkRate)
+        {
+            if (linkRate == CSMI_SAS_LINK_RATE_UNKNOWN)
+            {
+                return "CSMI_SAS_LINK_RATE_UNKNOWN";
+            }
+            if (linkRate == CSMI_SAS_PHY_DISABLED)
+            {
+                return "CSMI_SAS_PHY_DISABLED";
+            }
+            if (linkRate == CSMI_SAS_LINK_RATE_FAILED)
+            {
+                return "CSMI_SAS_LINK_RATE_FAILED";
+            }
+            if (linkRate == CSMI_SAS_SATA_SPINUP_HOLD)
+            {
+                return "CSMI_SAS_SATA_SPINUP_HOLD";
+            }
+            if (linkRate == CSMI_SAS_SATA_PORT_SELECTOR)
+            {
+                return "CSMI_SAS_SATA_PORT_SELECTOR";
+            }
+            if (linkRate == CSMI_SAS_LINK_RATE_1_5_GBPS)
+            {
+                return "CSMI_SAS_LINK_RATE_1_5_GBPS";
+            }
+            if (linkRate == CSMI_SAS_LINK_RATE_3_0_GBPS)
+            {
+                return "CSMI_SAS_LINK_RATE_3_0_GBPS";
+            }
+            if (linkRate == CSMI_SAS_LINK_VIRTUAL)
+            {
+                return "CSMI_SAS_LINK_VIRTUAL";
+            }
+
+            return "Unknown Link Rate";
+        }
     }
 }

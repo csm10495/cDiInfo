@@ -11,7 +11,61 @@
 
 // WinApi includes
 #include "Ntddscsi.h"
+#include "ata.h"
 
+#pragma pack(push,1)
+// Some ATA stuff that should possibly be elsewhere...
+typedef struct FIS_48_BIT
+{
+    UINT8 FISType; //Needs to be 0x27
+    UINT8 Reserved0 : 7;
+    UINT8 IsCommandRegister : 1;
+
+    union
+    {
+        UINT8 Command;
+        union
+        {
+            UINT8 Status;
+            struct
+            {
+                UINT8 ERR : 1;
+                UINT8 IDX : 1;
+                UINT8 CORR : 1;
+                UINT8 DRQ : 1;
+                UINT8 DSC : 1;
+                UINT8 DWF : 1;
+                UINT8 DRDY : 1;
+                UINT8 BSY : 1;
+            };
+        };
+    };
+
+    UINT8 Feature;
+
+    UINT8 LBALow;
+    UINT8 LBAMid;
+    UINT8 LBAHigh;
+    UINT8 Device;
+
+    UINT8 LBAExtLow;
+    UINT8 LBAExtMid;
+    UINT8 LBAExtHigh;
+    UINT8 FeatureExt;
+
+    UINT8 Count;
+    UINT8 CountExt;
+    UINT8 Reserved1;
+    UINT8 Control;
+
+    UINT32 ReservedEnd;
+
+}FIS_48_BIT, *PFIS_48_BIT;
+#pragma pack(pop)
+
+#define DEFAULT_DEVICE_REGISTER   0xA0
+#define DEFAULT_SECTOR_SIZE       512
+#define FIS_HOST_TO_DEVICE_48_BIT 0x27
 
 namespace cdi
 {
@@ -19,7 +73,6 @@ namespace cdi
     {
         namespace csmi
         {
-            // todo: pass in AttributeSet to add things about the overall raid array
             cdi::attr::AttributeSetVector getCSMIDevices(std::string devicePath)
             {
                 cdi::attr::AttributeSetVector retVec;
@@ -36,65 +89,180 @@ namespace cdi
                 {
                     BYTE buffer[8192] = { 0 };
                     BYTE buffer2[8192] = { 0 };
-
-                    // Get the RAID Configuration... which should include basic information on each 
-                    PCSMI_SAS_RAID_CONFIG_BUFFER raidConfigBuffer = (PCSMI_SAS_RAID_CONFIG_BUFFER)buffer;
-                    raidConfigBuffer->IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
-                    raidConfigBuffer->IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
-                    raidConfigBuffer->IoctlHeader.ControlCode = CC_CSMI_SAS_GET_RAID_CONFIG;
-                    raidConfigBuffer->IoctlHeader.Length = sizeof(buffer) - sizeof(IOCTL_HEADER);
-                    memcpy_s(&raidConfigBuffer->IoctlHeader.Signature, sizeof(raidConfigBuffer->IoctlHeader.Signature), CSMI_RAID_SIGNATURE, sizeof(CSMI_RAID_SIGNATURE));
-
                     DWORD bytesReturned = 0;
-                    if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer, sizeof(buffer), &buffer, sizeof(buffer), &bytesReturned, NULL) && bytesReturned > 0 && raidConfigBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
+
+                    std::map<UCHAR, CSMI_SAS_PHY_ENTITY> idToPhyEntries = getIdToPhyEntries(handle);
+
+                    //Get number of RAID sets
+                    PCSMI_SAS_RAID_INFO_BUFFER raidInfo = (PCSMI_SAS_RAID_INFO_BUFFER)buffer;
+                    raidInfo->IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
+                    raidInfo->IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
+                    raidInfo->IoctlHeader.ControlCode = CC_CSMI_SAS_GET_RAID_INFO;
+                    raidInfo->IoctlHeader.Length = sizeof(buffer) - sizeof(IOCTL_HEADER);
+                    memcpy_s(&raidInfo->IoctlHeader.Signature, sizeof(raidInfo->IoctlHeader.Signature), CSMI_RAID_SIGNATURE, sizeof(CSMI_RAID_SIGNATURE));
+                    // get number of raid sets before attempting to get information
+                    if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer, sizeof(buffer), &buffer, sizeof(buffer), &bytesReturned, NULL) && bytesReturned > 0 && raidInfo->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
                     {
-                        // todo: there is info in raidConfigBuffer that should go back up to 
-                        PCSMI_SAS_RAID_DRIVES drive = raidConfigBuffer->Configuration.Drives;
-                        for (size_t i = 0; i < raidConfigBuffer->Configuration.bDriveCount; i++)
+                        // Highest possible number of raid arrays on per controller
+                        for (UINT8 raidSetNum = 0; raidSetNum < raidInfo->Information.uNumRaidSets; raidSetNum++)
                         {
-                            cdi::attr::AttributeSet raidDrive;
-                            raidDrive.insert(cdi::attr::Attribute("Model", "A unique descriptor for this particular product from this manufacturer.", std::string((char*)drive->bModel, sizeof(drive->bModel))));
-                            raidDrive.insert(cdi::attr::Attribute("SerialNumber", "A unique descriptor for this particular device from the manufacturer.", std::string((char*)drive->bSerialNumber, sizeof(drive->bSerialNumber))));
-                            raidDrive.insert(cdi::attr::Attribute("ProductRevision", "A unique descriptor for the host software on this device. Sometimes known as Firmware.", std::string((char*)drive->bFirmware, sizeof(drive->bFirmware))));
-                            raidDrive.insert(cdi::attr::Attribute("AdapterDevicePath", "The device path for the device's adapter.", devicePath));
-                            raidDrive.insert(cdi::attr::Attribute((BYTE*)&drive->bDriveStatus, sizeof(drive->bDriveStatus), "DriveStatus", "A status for the drive based on the current RAID.", cdi::strings::csmiDriveStatusToString(drive->bDriveStatus)));
-                            raidDrive.insert(cdi::attr::Attribute((BYTE*)&drive->bDriveUsage, sizeof(drive->bDriveUsage), "DriveUsage", "A descriptor of how the drive is being used in terms of RAID.", cdi::strings::csmiDriveUsageToString(drive->bDriveUsage)));
-                            raidDrive.insert(cdi::attr::Attribute((BYTE*)&drive->bDriveType, sizeof(drive->bDriveType), "DriveType", "A descriptor of the type of drive this is.", cdi::strings::csmiDriveTypeToString(drive->bDriveType)));
-
-                            std::string pseudoDeviceId = "CSMI\\RAID_DISK\\" + cdi::strings::rTrim(std::string((char*)drive->bModel, sizeof(drive->bModel))) + \
-                                cdi::strings::rTrim(std::string((char*)drive->bFirmware, sizeof(drive->bFirmware))) + cdi::strings::rTrim(std::string((char*)drive->bSerialNumber, sizeof(drive->bSerialNumber))) + "&" + std::to_string(i);
-
-                            pseudoDeviceId = cdi::strings::recursiveReplace(pseudoDeviceId, "  ", " ");
-                            pseudoDeviceId = cdi::strings::recursiveReplace(pseudoDeviceId, " ", "&");
-
-                            raidDrive.insert(cdi::attr::Attribute("PseudoDeviceId", "A pseudo-unique identifier for the device. This is used if the device wasn't detected with a Device (Instance) Id.", pseudoDeviceId));
-
-                            PCSMI_SAS_GET_SCSI_ADDRESS_BUFFER scsiAddressBuffer = (PCSMI_SAS_GET_SCSI_ADDRESS_BUFFER)buffer2;
-                            scsiAddressBuffer->IoctlHeader.ControlCode = CC_CSMI_SAS_GET_SCSI_ADDRESS;
-                            scsiAddressBuffer->IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
-                            scsiAddressBuffer->IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
-                            scsiAddressBuffer->IoctlHeader.Length = sizeof(buffer2) - sizeof(IOCTL_HEADER);
-                            memcpy_s(&scsiAddressBuffer->IoctlHeader.Signature, sizeof(scsiAddressBuffer->IoctlHeader.Signature), CSMI_SAS_SIGNATURE, sizeof(CSMI_SAS_SIGNATURE));
-                            memcpy_s(&scsiAddressBuffer->bSASAddress, sizeof(scsiAddressBuffer->bSASAddress), &drive->bSASAddress, sizeof(drive->bSASAddress));
-                            memcpy_s(&scsiAddressBuffer->bSASLun, sizeof(scsiAddressBuffer->bSASLun), &drive->bSASLun, sizeof(drive->bSASLun));
-                            scsiAddressBuffer->bHostIndex = 0;
-                            scsiAddressBuffer->bPathId = 0;
-                            scsiAddressBuffer->bTargetId = 0;
-                            scsiAddressBuffer->bLun = 0;
-                            if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer2, sizeof(buffer2), &buffer2, sizeof(buffer2), &bytesReturned, NULL) && bytesReturned > 0)
+                            // Get the RAID Configuration... which should include basic information on each 
+                            PCSMI_SAS_RAID_CONFIG_BUFFER raidConfigBuffer = (PCSMI_SAS_RAID_CONFIG_BUFFER)buffer;
+                            raidConfigBuffer->IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
+                            raidConfigBuffer->IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
+                            raidConfigBuffer->IoctlHeader.ControlCode = CC_CSMI_SAS_GET_RAID_CONFIG;
+                            raidConfigBuffer->IoctlHeader.Length = sizeof(buffer) - sizeof(IOCTL_HEADER);
+                            memcpy_s(&raidConfigBuffer->IoctlHeader.Signature, sizeof(raidConfigBuffer->IoctlHeader.Signature), CSMI_RAID_SIGNATURE, sizeof(CSMI_RAID_SIGNATURE));
+                            raidConfigBuffer->Configuration.uRaidSetIndex = raidSetNum;
+                            if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer, sizeof(buffer), &buffer, sizeof(buffer), &bytesReturned, NULL) && bytesReturned > 0 && raidConfigBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
                             {
-                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&scsiAddressBuffer->bPathId, sizeof(UCHAR), "ScsiPathId", "SCSI Path Id. Often points to a specific device behind the host bus (SCSI) adapter.", std::to_string(scsiAddressBuffer->bPathId)));
+                                PCSMI_SAS_RAID_DRIVES drive = raidConfigBuffer->Configuration.Drives;
+                                for (size_t i = 0; i < raidConfigBuffer->Configuration.bDriveCount; i++)
+                                {
+                                    cdi::attr::AttributeSet raidDrive;
+                                    raidDrive.insert(cdi::attr::Attribute("Model", "A unique descriptor for this particular product from this manufacturer.", std::string((char*)drive->bModel, sizeof(drive->bModel))));
+                                    raidDrive.insert(cdi::attr::Attribute("SerialNumber", "A unique descriptor for this particular device from the manufacturer.", std::string((char*)drive->bSerialNumber, sizeof(drive->bSerialNumber))));
+                                    raidDrive.insert(cdi::attr::Attribute("ProductRevision", "A unique descriptor for the host software on this device. Sometimes known as Firmware.", std::string((char*)drive->bFirmware, sizeof(drive->bFirmware))));
+                                    raidDrive.insert(cdi::attr::Attribute("AdapterDevicePath", "The device path for the device's adapter.", devicePath));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&drive->bDriveStatus, sizeof(drive->bDriveStatus), "DriveStatus", "A status for the drive based on the current RAID.", cdi::strings::csmiDriveStatusToString(drive->bDriveStatus)));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&drive->bDriveUsage, sizeof(drive->bDriveUsage), "DriveUsage", "A descriptor of how the drive is being used in terms of RAID.", cdi::strings::csmiDriveUsageToString(drive->bDriveUsage)));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&drive->bDriveType, sizeof(drive->bDriveType), "DriveType", "A descriptor of the type of drive this is.", cdi::strings::csmiDriveTypeToString(drive->bDriveType)));
 
-                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&scsiAddressBuffer->bLun, sizeof(UCHAR), "ScsiLun", "SCSI Logical Unit Number. Often points to a specific device handler behind a specific path id and target id behind the host bus (SCSI) adapter.", std::to_string(scsiAddressBuffer->bLun)));
+                                    std::string pseudoDeviceId = "CSMI\\RAID_DISK\\" + cdi::strings::rTrim(std::string((char*)drive->bModel, sizeof(drive->bModel))) + \
+                                        cdi::strings::rTrim(std::string((char*)drive->bFirmware, sizeof(drive->bFirmware))) + cdi::strings::rTrim(std::string((char*)drive->bSerialNumber, sizeof(drive->bSerialNumber))) + \
+                                        "&" + std::to_string(raidSetNum) + "&" + std::to_string(i);
 
-                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&scsiAddressBuffer->bTargetId, sizeof(UCHAR), "ScsiTargetId", "SCSI Target Id. Often points to a specific device handler behind a specific path id behind the host bus (SCSI) adapter.", std::to_string(scsiAddressBuffer->bTargetId)));
+                                    pseudoDeviceId = cdi::strings::recursiveReplace(pseudoDeviceId, "  ", " ");
+                                    pseudoDeviceId = cdi::strings::recursiveReplace(pseudoDeviceId, " ", "&");
+
+                                    raidDrive.insert(cdi::attr::Attribute("PseudoDeviceId", "A pseudo-unique identifier for the device. This is used if the device wasn't detected with a Device (Instance) Id.", pseudoDeviceId));
+
+                                    PCSMI_SAS_GET_SCSI_ADDRESS_BUFFER scsiAddressBuffer = (PCSMI_SAS_GET_SCSI_ADDRESS_BUFFER)buffer2;
+                                    scsiAddressBuffer->IoctlHeader.ControlCode = CC_CSMI_SAS_GET_SCSI_ADDRESS;
+                                    scsiAddressBuffer->IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
+                                    scsiAddressBuffer->IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
+                                    scsiAddressBuffer->IoctlHeader.Length = sizeof(buffer2) - sizeof(IOCTL_HEADER);
+                                    memcpy_s(&scsiAddressBuffer->IoctlHeader.Signature, sizeof(scsiAddressBuffer->IoctlHeader.Signature), CSMI_SAS_SIGNATURE, sizeof(CSMI_SAS_SIGNATURE));
+                                    memcpy_s(&scsiAddressBuffer->bSASAddress, sizeof(scsiAddressBuffer->bSASAddress), &drive->bSASAddress, sizeof(drive->bSASAddress));
+                                    memcpy_s(&scsiAddressBuffer->bSASLun, sizeof(scsiAddressBuffer->bSASLun), &drive->bSASLun, sizeof(drive->bSASLun));
+                                    scsiAddressBuffer->bHostIndex = 0;
+                                    scsiAddressBuffer->bPathId = 0;
+                                    scsiAddressBuffer->bTargetId = 0;
+                                    scsiAddressBuffer->bLun = 0;
+                                    if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer2, sizeof(buffer2), &buffer2, sizeof(buffer2), &bytesReturned, NULL) && bytesReturned > 0)
+                                    {
+                                        raidDrive.insert(cdi::attr::Attribute((BYTE*)&scsiAddressBuffer->bPathId, sizeof(UCHAR), "ScsiPathId", "SCSI Path Id. Often points to a specific device behind the host bus (SCSI) adapter.", std::to_string(scsiAddressBuffer->bPathId)));
+
+                                        raidDrive.insert(cdi::attr::Attribute((BYTE*)&scsiAddressBuffer->bLun, sizeof(UCHAR), "ScsiLun", "SCSI Logical Unit Number. Often points to a specific device handler behind a specific path id and target id behind the host bus (SCSI) adapter.", std::to_string(scsiAddressBuffer->bLun)));
+
+                                        raidDrive.insert(cdi::attr::Attribute((BYTE*)&scsiAddressBuffer->bTargetId, sizeof(UCHAR), "ScsiTargetId", "SCSI Target Id. Often points to a specific device handler behind a specific path id behind the host bus (SCSI) adapter.", std::to_string(scsiAddressBuffer->bTargetId)));
+                                    }
+
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&idToPhyEntries[drive->bSASAddress[2]].Attached.bPhyIdentifier, sizeof(idToPhyEntries[drive->bSASAddress[2]].Attached.bPhyIdentifier), "PhyIdentifier", "Specifies the Phy used to make requests.", std::to_string(idToPhyEntries[drive->bSASAddress[2]].Attached.bPhyIdentifier)));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&idToPhyEntries[drive->bSASAddress[2]].bPortIdentifier, sizeof(idToPhyEntries[drive->bSASAddress[2]].bPortIdentifier), "PortIdentifier", "Specifies the Port used to issue requests.", std::to_string(idToPhyEntries[drive->bSASAddress[2]].bPortIdentifier)));
+
+                                    // Send ATA Command
+                                    PCSMI_SAS_STP_PASSTHRU_BUFFER passthruBuffer = (PCSMI_SAS_STP_PASSTHRU_BUFFER)buffer2;
+                                    memset(&buffer2, 0, sizeof(buffer2));
+                                    passthruBuffer->IoctlHeader.ControlCode = CC_CSMI_SAS_STP_PASSTHRU;
+                                    passthruBuffer->IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
+                                    passthruBuffer->IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
+                                    passthruBuffer->IoctlHeader.Length = sizeof(buffer2) - sizeof(IOCTL_HEADER);
+                                    memcpy_s(&passthruBuffer->IoctlHeader.Signature, sizeof(passthruBuffer->IoctlHeader.Signature), CSMI_SAS_SIGNATURE, sizeof(CSMI_SAS_SIGNATURE));
+
+                                    // Not sure why the 2's but it's the only way it works.
+                                    passthruBuffer->Parameters.bDestinationSASAddress[2] = drive->bSASAddress[2];
+                                    passthruBuffer->Parameters.bPhyIdentifier = idToPhyEntries[drive->bSASAddress[2]].Attached.bPhyIdentifier;
+                                    passthruBuffer->Parameters.bPortIdentifier = idToPhyEntries[drive->bSASAddress[2]].bPortIdentifier;
+                                    passthruBuffer->Parameters.bConnectionRate = CSMI_SAS_LINK_RATE_NEGOTIATED;
+                                    passthruBuffer->Parameters.uFlags = CSMI_SAS_STP_PIO | CSMI_SAS_STP_READ;
+                                    passthruBuffer->Parameters.uDataLength = sizeof(buffer2) - sizeof(CSMI_SAS_STP_PASSTHRU_BUFFER);
+
+                                    PFIS_48_BIT fis = (PFIS_48_BIT)passthruBuffer->Parameters.bCommandFIS;
+                                    fis->FISType = FIS_HOST_TO_DEVICE_48_BIT;
+                                    fis->IsCommandRegister = true;
+                                    fis->Command = SMART_CMD;
+                                    fis->Feature = READ_THRESHOLDS;
+                                    fis->LBAMid = SMART_CYL_LOW;
+                                    fis->LBAHigh = SMART_CYL_HI;
+                                    fis->Device = DEFAULT_DEVICE_REGISTER;
+                                    PFIS_48_BIT status = (PFIS_48_BIT)passthruBuffer->Status.bStatusFIS;
+
+                                    // Read thresholds first, if that passes read attributes
+                                    if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer2, sizeof(buffer2), &buffer2, sizeof(buffer2), &bytesReturned, NULL) && bytesReturned > 0 && passthruBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
+                                    {
+                                        // Check if the ATA command passed completely
+                                        if (!status->ERR)
+                                        {
+                                            BYTE thresholds[READ_THRESHOLD_BUFFER_SIZE] = { 0 };
+                                            memcpy_s(&thresholds, sizeof(thresholds), passthruBuffer->bDataBuffer, READ_THRESHOLD_BUFFER_SIZE);
+                                            fis->Feature = READ_ATTRIBUTES;
+
+                                            // Read attributes
+                                            if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer2, sizeof(buffer2), &buffer2, sizeof(buffer2), &bytesReturned, NULL) && bytesReturned > 0 && passthruBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
+                                            {
+                                                if (!status->ERR)
+                                                {
+                                                    std::string SMARTData = cdi::strings::smartToString((BYTE*)&passthruBuffer->bDataBuffer, READ_THRESHOLD_BUFFER_SIZE, thresholds);
+                                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&passthruBuffer->bDataBuffer, READ_THRESHOLD_BUFFER_SIZE, "SMARTData", "Self-Monitoring and Reporting Technology (SMART) data. Used to diagnose the state and potential for failure of a device.", SMARTData));
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Read SMART Return Status
+                                    fis->Feature = RETURN_SMART_STATUS;
+                                    if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer2, sizeof(buffer2), &buffer2, sizeof(buffer2), &bytesReturned, NULL) && bytesReturned > 0 && passthruBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
+                                    {
+                                        if (!status->ERR)
+                                        {
+                                            std::string SMARTReturnStatus = "Healthy";
+                                            if (status->LBAMid == BAD_SMART_LOW && status->LBAHigh == BAD_SMART_HIGH)
+                                            {
+                                                SMARTReturnStatus = "Threshold Exceeded Condition";
+                                            }
+                                            raidDrive.insert(cdi::attr::Attribute((BYTE*)&status, sizeof(status), "SMARTReturnStatus", "Status determined via SMART metrics.", SMARTReturnStatus));
+                                        }
+                                    }
+
+                                    // Identify Device... to play with some info
+                                    fis->Command = 0xEC;
+                                    fis->Feature = 0;
+                                    fis->LBAMid = 0;
+                                    fis->LBAHigh = 0;
+
+                                    if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer2, sizeof(buffer2), &buffer2, sizeof(buffer2), &bytesReturned, NULL) && bytesReturned > 0 && passthruBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
+                                    {
+                                        if (!status->ERR)
+                                        {
+                                            // todo: possibly move this to a different function so that in the future non CSMI can use it as well. (Decoding of Identify Device Data)
+                                            PIDENTIFY_DEVICE_DATA identifyDevice = (PIDENTIFY_DEVICE_DATA)passthruBuffer->bDataBuffer;
+
+                                            // Byte per (logical) sector
+                                            DWORD wordsPerLogicalSector = *(DWORD*)&identifyDevice->WordsPerLogicalSector;
+                                            if ((wordsPerLogicalSector >> 12) & 1) // shall be valid when bit 12 is set to 1
+                                            {
+                                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&wordsPerLogicalSector, sizeof(DWORD), "BytesPerSector", "The number of bytes in a sector on the specified volume. This value was translated from Words in the ATA Identify Device response block. ", std::to_string(wordsPerLogicalSector * sizeof(WORD))));
+                                            }
+                                            else
+                                            {
+                                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&wordsPerLogicalSector, sizeof(DWORD), "BytesPerSector", "The number of bytes in a sector on the specified volume. This value was translated from Words in the ATA Identify Device response block. ", std::to_string(DEFAULT_SECTOR_SIZE)));
+                                            }
+                                        }
+                                    }
+
+                                    // Some stuff from the PHY Entity
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&idToPhyEntries[drive->bSASAddress[2]].bMaximumLinkRate, sizeof(idToPhyEntries[drive->bSASAddress[2]].bMaximumLinkRate), "MaximumLinkRate", "Maximum rate for the link connection.", cdi::strings::linkRateToString(idToPhyEntries[drive->bSASAddress[2]].bMaximumLinkRate)));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&idToPhyEntries[drive->bSASAddress[2]].bMinimumLinkRate, sizeof(idToPhyEntries[drive->bSASAddress[2]].bMinimumLinkRate), "MinimumLinkRate", "Minimum rate for the link connection.", cdi::strings::linkRateToString(idToPhyEntries[drive->bSASAddress[2]].bMinimumLinkRate)));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&idToPhyEntries[drive->bSASAddress[2]].bNegotiatedLinkRate, sizeof(idToPhyEntries[drive->bSASAddress[2]].bNegotiatedLinkRate), "NegotiatedLinkRate", "Negotiated (and current) rate for the link connection.", cdi::strings::linkRateToString(idToPhyEntries[drive->bSASAddress[2]].bNegotiatedLinkRate)));
+                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&idToPhyEntries[drive->bSASAddress[2]].bPhyChangeCount, sizeof(idToPhyEntries[drive->bSASAddress[2]].bPhyChangeCount), "PhyChangeCount", "The current count of BROADCAST(CHANGE) primitives received on this phy.", std::to_string(idToPhyEntries[drive->bSASAddress[2]].bPhyChangeCount)));
+                                    //todo: more stuff in idToPhyEntries[drive->bSASAddress[2]].Attached
+                                    retVec.push_back(raidDrive);
+                                    drive++;
+                                }
                             }
-
-                            retVec.push_back(raidDrive);
-                            drive++;
                         }
                     }
-
                     CloseHandle(handle);
                 }
 
@@ -149,11 +317,37 @@ namespace cdi
 
                     std::string version = std::to_string(controllerConfig->Configuration.usMajorRevision) + "." + std::to_string(controllerConfig->Configuration.usMinorRevision) + "." + std::to_string(controllerConfig->Configuration.usBuildRevision) + "." + std::to_string(controllerConfig->Configuration.usReleaseRevision);
                     attributeSet.insert(cdi::attr::Attribute("ControllerProductRevision", "A unique descriptor for the host software on the controller. Sometimes known as Firmware.", version));
-                
+
                     attributeSet.insert(cdi::attr::Attribute((BYTE*)&controllerConfig->Configuration.uControllerFlags, sizeof(controllerConfig->Configuration.uControllerFlags), "ControllerFlags", "Flags designating the behavior of the controller.", cdi::strings::csmiControllerFlagsToString(controllerConfig->Configuration.bIoBusType)));
                 }
 
                 // todo: Still have at least CC_CSMI_SAS_GET_CNTLR_STATUS 
+            }
+
+            std::map<UCHAR, CSMI_SAS_PHY_ENTITY> getIdToPhyEntries(HANDLE &handle)
+            {
+                std::map<UCHAR, CSMI_SAS_PHY_ENTITY> idToPhyEntries;
+
+                CSMI_SAS_PHY_INFO_BUFFER phyInfo = { 0 };
+                phyInfo.IoctlHeader.ControlCode = CC_CSMI_SAS_GET_PHY_INFO;
+                phyInfo.IoctlHeader.HeaderLength = sizeof(IOCTL_HEADER);
+                phyInfo.IoctlHeader.Timeout = CSMI_SAS_TIMEOUT;
+                phyInfo.IoctlHeader.Length = sizeof(phyInfo) - sizeof(IOCTL_HEADER);
+                memcpy_s(&phyInfo.IoctlHeader.Signature, sizeof(phyInfo.IoctlHeader.Signature), CSMI_SAS_SIGNATURE, sizeof(CSMI_SAS_SIGNATURE));
+                DWORD bytesReturned = 0;
+                if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &phyInfo, sizeof(phyInfo), &phyInfo, sizeof(phyInfo), &bytesReturned, NULL) && bytesReturned > 0)
+                {
+                    for (size_t i = 0; i < phyInfo.Information.bNumberOfPhys; i++)
+                    {
+                        CSMI_SAS_PHY_ENTITY entity;
+                        memcpy_s(&entity, sizeof(entity), &phyInfo.Information.Phy[i], sizeof(phyInfo.Information.Phy[i]));
+
+                        // Can't explain this... but bSASAddress[2] seems to correspond with the SAS address from RAID above
+                        idToPhyEntries[entity.Attached.bSASAddress[2]] = entity;
+                    }
+                }
+
+                return idToPhyEntries;
             }
         }
     }

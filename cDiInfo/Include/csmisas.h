@@ -741,7 +741,7 @@ typedef struct _IOCTL_HEADER {
 #define CSMI_SAS_SATA_PORT_SELECTOR 0x04
 #define CSMI_SAS_LINK_RATE_1_5_GBPS 0x08
 #define CSMI_SAS_LINK_RATE_3_0_GBPS 0x09
-#define CSMI_SAS_LINK_VIRTUAL       0x10
+#define CSMI_SAS_LINK_VIRTUAL       0x0A // CSM: switched this, seems like a misprint as it was 0x10
 
 // Discover state
 // (bAutoDiscover)

@@ -69,9 +69,6 @@ typedef std::map<std::string, std::string> AttributeMap;
 // Used to map a DeviceId to a SCSI Port
 typedef std::map<std::string, UINT16> DeviceIdToScsiPortMap;
 
-// For SMART parsing
-#define BAD_SMART_LOW   0xF4
-#define BAD_SMART_HIGH  0x2C
 // For Drive size conversion
 #define BYTES_IN_GIGABYTE 1073741824
 // Used to designate that we couldn't get this attribute

@@ -156,5 +156,11 @@ namespace cdi
 
         // Converts CSMI Controller flags to string
         std::string csmiControllerFlagsToString(int flags);
+
+        // Converts an ATA String to normal string (byte swap every 2 bytes)
+        std::string ataStringToString(std::string ataString);
+
+        // Convert CSMI link rate to string
+        std::string linkRateToString(int linkRate);
     }
 }
