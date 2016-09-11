@@ -857,13 +857,16 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
             devAttrSet = getDeviceAttributeSet(interfaceDevs, devInfo, deviceIdToScsiPortMap);
 #endif // SINGLETHREADED
 
+#ifdef MULTITHREADED
+            std::future<cdi::attr::AttributeSet> otherAttrSet = std::async(getAttributeSetFromDevicePath, DevicePath, msDosDeviceNameToDriveLetterMap);
+            std::future<cdi::attr::AttributeSetVector> csmiDevices = std::async(cdi::detection::csmi::getCSMIDevices, DevicePath);
+#else // SINGLETHREADED
             cdi::attr::AttributeSet otherAttrSet = getAttributeSetFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
-
-            // Add CSMI... todo: explore multithreading if this is slow
             cdi::attr::AttributeSetVector csmiDevices = cdi::detection::csmi::getCSMIDevices(DevicePath);
+#endif // SINGLETHREADED
 
 #ifdef MULTITHREADED
-            devAttrSet = mergeAttributeSets(futureDevAttrSet.get(), otherAttrSet);
+            devAttrSet = mergeAttributeSets(futureDevAttrSet.get(), otherAttrSet.get());
 #else // SINGLETHREADED
             mergeAttributeSets(devAttrSet, otherAttrSet);
 #endif // SINGLETHREADED
@@ -873,7 +876,12 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
             interfaces.push_back(devAttrSet);
 
             // Add in CSMI devices
+#ifdef MULTITHREADED
+            auto &csmiDevsGotten = csmiDevices.get();
+            interfaces.insert(interfaces.end(), csmiDevsGotten.begin(), csmiDevsGotten.end());
+#else // SINGLETHREADED
             interfaces.insert(interfaces.end(), csmiDevices.begin(), csmiDevices.end());
+#endif // SINGLETHREADED
         }
 
         delete[] buffer;
