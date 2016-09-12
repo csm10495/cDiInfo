@@ -162,5 +162,17 @@ namespace cdi
 
         // Convert CSMI link rate to string
         std::string linkRateToString(int linkRate);
+
+        // Convert CSMI device type to string
+        std::string csmiDeviceTypeToString(int deviceType);
+
+        // Convert CSMI target protocol to string
+        std::string csmiTargetProtocolToString(int proto);
+
+        // Convert CSMI controller status to string
+        std::string csmiControllerStatusToString(int s);
+
+        // Convert CSMI offline reason to string
+        std::string csmiOfflineReasonToString(int s);
     }
 }

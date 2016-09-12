@@ -849,6 +849,7 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
         if (SetupDiGetDeviceInterfaceDetail(interfaceDevs, &interfaceInfo, interfaceDetail, size, NULL, &devInfo))
         {
             cdi::attr::AttributeSet devAttrSet;
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&interfaceInfo.InterfaceClassGuid, sizeof(GUID), "InterfaceClassGuid", "A globally unique identifier for this particular interface type.", cdi::strings::guidToString(interfaceInfo.InterfaceClassGuid)));
             std::string DevicePath = interfaceDetail->DevicePath;
 
 #ifdef MULTITHREADED
@@ -857,12 +858,15 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
             devAttrSet = getDeviceAttributeSet(interfaceDevs, devInfo, deviceIdToScsiPortMap);
 #endif // SINGLETHREADED
 
+            // Things to add to the current device via the CSMI IOCTLS 
+            cdi::attr::AttributeSet adapterCsmiAttributes;
+
 #ifdef MULTITHREADED
             std::future<cdi::attr::AttributeSet> otherAttrSet = std::async(getAttributeSetFromDevicePath, DevicePath, msDosDeviceNameToDriveLetterMap);
-            std::future<cdi::attr::AttributeSetVector> csmiDevices = std::async(cdi::detection::csmi::getCSMIDevices, DevicePath);
+            std::future<cdi::attr::AttributeSetVector> csmiDevices = std::async(cdi::detection::csmi::getCSMIDevices, DevicePath, ref(adapterCsmiAttributes));
 #else // SINGLETHREADED
             cdi::attr::AttributeSet otherAttrSet = getAttributeSetFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
-            cdi::attr::AttributeSetVector csmiDevices = cdi::detection::csmi::getCSMIDevices(DevicePath);
+            cdi::attr::AttributeSetVector csmiDevices = cdi::detection::csmi::getCsmiDevices(DevicePath, adapterCsmiAttributes);
 #endif // SINGLETHREADED
 
 #ifdef MULTITHREADED
@@ -871,10 +875,6 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
             mergeAttributeSets(devAttrSet, otherAttrSet);
 #endif // SINGLETHREADED
 
-            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&interfaceInfo.InterfaceClassGuid, sizeof(GUID), "InterfaceClassGuid", "A globally unique identifier for this particular interface type.", cdi::strings::guidToString(interfaceInfo.InterfaceClassGuid)));
-
-            interfaces.push_back(devAttrSet);
-
             // Add in CSMI devices
 #ifdef MULTITHREADED
             auto &csmiDevsGotten = csmiDevices.get();
@@ -882,6 +882,12 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
 #else // SINGLETHREADED
             interfaces.insert(interfaces.end(), csmiDevices.begin(), csmiDevices.end());
 #endif // SINGLETHREADED
+
+            // Add in attributes about this device as a CSMI Controller/Adapter
+            devAttrSet.insert(adapterCsmiAttributes.begin(), adapterCsmiAttributes.end());
+
+            interfaces.push_back(devAttrSet);
+
         }
 
         delete[] buffer;

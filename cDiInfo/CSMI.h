@@ -30,7 +30,8 @@ namespace cdi
         namespace csmi
         {
             // Returns an AttributeSetVector of devices found behind CSMI RAID
-            cdi::attr::AttributeSetVector getCSMIDevices(std::string devicePath);
+            // Also add stuff to the adapter device
+            cdi::attr::AttributeSetVector getCsmiDevices(std::string devicePath, cdi::attr::AttributeSet &adapterDeviceAttributeSet);
 
             // Adds attributes via CSMI to a CSMI RAID controller
             void addControllerCSMIAttributes(HANDLE &handle, cdi::attr::AttributeSet &attributeSet);

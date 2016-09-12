@@ -2934,5 +2934,90 @@ namespace cdi
 
             return "Unknown Link Rate";
         }
+
+        std::string csmiDeviceTypeToString(int deviceType)
+        {
+            if (deviceType == CSMI_SAS_PHY_UNUSED)
+            {
+                return "CSMI_SAS_PHY_UNUSED";
+            }
+            if (deviceType == CSMI_SAS_END_DEVICE)
+            {
+                return "CSMI_SAS_END_DEVICE";
+            }
+            if (deviceType == CSMI_SAS_EDGE_EXPANDER_DEVICE)
+            {
+                return "CSMI_SAS_EDGE_EXPANDER_DEVICE";
+            }
+            if (deviceType == CSMI_SAS_FANOUT_EXPANDER_DEVICE)
+            {
+                return "CSMI_SAS_FANOUT_EXPANDER_DEVICE";
+            }
+
+            return "Unknown Device Type";
+        }
+
+        std::string csmiTargetProtocolToString(int proto)
+        {
+            if (proto == CSMI_SAS_PROTOCOL_SATA)
+            {
+                return "CSMI_SAS_PROTOCOL_SATA";
+            }
+            if (proto == CSMI_SAS_PROTOCOL_SMP)
+            {
+                return "CSMI_SAS_PROTOCOL_SMP";
+            }
+            if (proto == CSMI_SAS_PROTOCOL_STP)
+            {
+                return "CSMI_SAS_PROTOCOL_STP";
+            }
+            if (proto == CSMI_SAS_PROTOCOL_SSP)
+            {
+                return "CSMI_SAS_PROTOCOL_SSP";
+            }
+            return "Unknown Protocol";
+        }
+
+        std::string csmiControllerStatusToString(int s)
+        {
+            if (s == CSMI_SAS_CNTLR_STATUS_GOOD)
+            {
+                return "CSMI_SAS_CNTLR_STATUS_GOOD";
+            }
+            if (s == CSMI_SAS_CNTLR_STATUS_FAILED)
+            {
+                return "CSMI_SAS_CNTLR_STATUS_FAILED";
+            }
+            if (s == CSMI_SAS_CNTLR_STATUS_OFFLINE)
+            {
+                return "CSMI_SAS_CNTLR_STATUS_OFFLINE";
+            }
+            if (s == CSMI_SAS_CNTLR_STATUS_POWEROFF)
+            {
+                return "CSMI_SAS_CNTLR_STATUS_POWEROFF";
+            }
+            return "Unknown Controller Status";
+        }
+
+        std::string csmiOfflineReasonToString(int s)
+        {
+            if (s == CSMI_SAS_OFFLINE_REASON_NO_REASON)
+            {
+                return "CSMI_SAS_OFFLINE_REASON_NO_REASON";
+            }
+            if (s == CSMI_SAS_OFFLINE_REASON_INITIALIZING)
+            {
+                return "CSMI_SAS_OFFLINE_REASON_INITIALIZING";
+            }
+            if (s == CSMI_SAS_OFFLINE_REASON_BACKSIDE_BUS_DEGRADED)
+            {
+                return "CSMI_SAS_OFFLINE_REASON_BACKSIDE_BUS_DEGRADED";
+            }
+            if (s == CSMI_SAS_OFFLINE_REASON_BACKSIDE_BUS_FAILURE)
+            {
+                return "CSMI_SAS_OFFLINE_REASON_BACKSIDE_BUS_FAILURE";
+            }
+            return "Unknown Offline Reason";
+        }
     }
 }
