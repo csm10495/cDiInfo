@@ -863,7 +863,7 @@ cdi::attr::AttributeSetVector getInterfaceAttributeSet(GUID classGuid)
 
 #ifdef MULTITHREADED
             std::future<cdi::attr::AttributeSet> otherAttrSet = std::async(getAttributeSetFromDevicePath, DevicePath, msDosDeviceNameToDriveLetterMap);
-            std::future<cdi::attr::AttributeSetVector> csmiDevices = std::async(cdi::detection::csmi::getCSMIDevices, DevicePath, ref(adapterCsmiAttributes));
+            std::future<cdi::attr::AttributeSetVector> csmiDevices = std::async(cdi::detection::csmi::getCsmiDevices, DevicePath, ref(adapterCsmiAttributes));
 #else // SINGLETHREADED
             cdi::attr::AttributeSet otherAttrSet = getAttributeSetFromDevicePath(DevicePath, msDosDeviceNameToDriveLetterMap);
             cdi::attr::AttributeSetVector csmiDevices = cdi::detection::csmi::getCsmiDevices(DevicePath, adapterCsmiAttributes);
