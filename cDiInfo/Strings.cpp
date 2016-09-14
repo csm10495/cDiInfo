@@ -8,13 +8,20 @@
 #include "Strings.h"
 
 // WinApi Includes
+#include <DbgHelp.h>
 #include <SetupAPI.h>
+
+// Standard Library Includes
+#include <mutex>
 
 // Characters to trim 
 #define TRIM_CHARS " \n\r\t"
 
 // Used for buffer with 0 length
 #define ZERO_LENGTH_BUFFER "<Zero Length buffer>"
+
+// Need to synchronize on SymMatchString
+std::mutex symMatchMutex;
 
 // Structures for SMART parsing
 #pragma pack(push,1)
@@ -3018,6 +3025,14 @@ namespace cdi
                 return "CSMI_SAS_OFFLINE_REASON_BACKSIDE_BUS_FAILURE";
             }
             return "Unknown Offline Reason";
+        }
+
+        bool wildcardMatch(std::string base, std::string expression, bool caseSensitive)
+        {
+            // SymMatchString is NOT threadsafe
+            std::lock_guard<std::mutex> lock(symMatchMutex);
+            return SymMatchString(base.c_str(), expression.c_str(), caseSensitive) == TRUE;
+            // auto release lock...
         }
     }
 }

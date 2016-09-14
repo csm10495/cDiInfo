@@ -151,7 +151,7 @@ namespace cdi
                 auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
                 if (itr != deviceAttrSet.end())
                 {
-                    if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    if (cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
                     {
                         matchingAttributeSets.push_back(deviceAttrSet);
                     }
@@ -177,7 +177,7 @@ namespace cdi
                 auto itr = attributeSet.find(ATTRWITHNAME(key));
                 if (itr != attributeSet.end())
                 {
-                    if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    if (cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
                     {
                         inAS.insert(*itr);
                     }
@@ -196,7 +196,7 @@ namespace cdi
                 {
                     for (auto attributeName : otherAttributeNames)
                     {
-                        if (SymMatchString(attribute.getName().c_str(), attributeName.c_str(), FALSE))
+                        if (cdi::strings::wildcardMatch(attribute.getName(), attributeName, FALSE))
                         {
                             inAS.insert(attribute);
                         }
@@ -219,7 +219,7 @@ namespace cdi
                 auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
                 if (itr != deviceAttrSet.end())
                 {
-                    if (!SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    if (!cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
                     {
                         matchingAttributeSets.push_back(deviceAttrSet);
                     }
@@ -251,7 +251,7 @@ namespace cdi
                 auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
                 if (itr != deviceAttrSet.end())
                 {
-                    if (SymMatchString(itr->getValue<std::string>().c_str(), value.c_str(), FALSE))
+                    if (cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
                     {
                         return deviceAttrSet;
                     }

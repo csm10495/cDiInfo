@@ -174,5 +174,8 @@ namespace cdi
 
         // Convert CSMI offline reason to string
         std::string csmiOfflineReasonToString(int s);
+
+        // Wildcard matching
+        bool wildcardMatch(std::string base, std::string expression, bool caseSensitive);
     }
 }
