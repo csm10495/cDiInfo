@@ -120,13 +120,13 @@ namespace cdi
                             raidConfigBuffer->IoctlHeader.Length = sizeof(buffer) - sizeof(IOCTL_HEADER);
                             memcpy_s(&raidConfigBuffer->IoctlHeader.Signature, sizeof(raidConfigBuffer->IoctlHeader.Signature), CSMI_RAID_SIGNATURE, sizeof(CSMI_RAID_SIGNATURE));
                             raidConfigBuffer->Configuration.uRaidSetIndex = raidSetNum;
-                            if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer, sizeof(buffer), &buffer, sizeof(buffer), &bytesReturned, NULL) && bytesReturned > 0 && raidConfigBuffer->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
+                            if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer, sizeof(buffer), &buffer, sizeof(buffer), &bytesReturned, NULL) && bytesReturned > 0)
                             {
                                 PCSMI_SAS_RAID_DRIVES drive = raidConfigBuffer->Configuration.Drives;
                                 for (size_t i = 0; i < raidConfigBuffer->Configuration.bDriveCount; i++)
                                 {
                                     cdi::attr::AttributeSet raidDrive;
-                                    raidDrive.insert(cdi::attr::Attribute("Model", "A unique descriptor for this particular product from this manufacturer.", std::string((char*)drive->bModel, sizeof(drive->bModel))));
+                                    raidDrive.insert(cdi::attr::Attribute("ProductId", "A unique descriptor for this particular product from this manufacturer.", std::string((char*)drive->bModel, sizeof(drive->bModel))));
                                     raidDrive.insert(cdi::attr::Attribute("SerialNumber", "A unique descriptor for this particular device from the manufacturer.", std::string((char*)drive->bSerialNumber, sizeof(drive->bSerialNumber))));
                                     raidDrive.insert(cdi::attr::Attribute("ProductRevision", "A unique descriptor for the host software on this device. Sometimes known as Firmware.", std::string((char*)drive->bFirmware, sizeof(drive->bFirmware))));
                                     raidDrive.insert(cdi::attr::Attribute("AdapterDevicePath", "The device path for the device's adapter.", devicePath));

@@ -1327,7 +1327,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
 
         // SMART / failure prediction information
         PSTORAGE_PREDICT_FAILURE storagePredictFailure = PSTORAGE_PREDICT_FAILURE(b);
-        if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned > 0)
+        if (DeviceIoControl(handle, IOCTL_STORAGE_PREDICT_FAILURE, NULL, NULL, storagePredictFailure, sizeof(STORAGE_PREDICT_FAILURE), &bytesReturned, NULL) && bytesReturned >= 512)
         {
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storagePredictFailure->PredictFailure, sizeof(BOOLEAN), "PredictFailure", "Using Self-Monitoring and Reporting Technology (SMART) data, a prediction as to if device failure is imminent.", toBoolString(storagePredictFailure->PredictFailure)));
 
