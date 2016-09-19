@@ -335,8 +335,8 @@ cdi::attr::AttributeSet getDeviceAttributeSet(HDEVINFO devs, SP_DEVINFO_DATA dev
     addIfHave(devAttrSet, devs, devInfo, SPDRP_LOCATION_PATHS, __STRING_, "LocationPaths", "The location of the device instance in the device tree.", attr);
     addIfHave(devAttrSet, devs, devInfo, SPDRP_BASE_CONTAINERID, __WSTRING_, "BaseContainerId", "GUID value of the base container identifer.", attr);
 
-    auto descAttr = devAttrSet.find(ATTRWITHNAME("UiNumberDescFormat"));
-    auto numberAttr = devAttrSet.find(ATTRWITHNAME("UiNumber"));
+    auto descAttr = devAttrSet.find(ATTR_WITH_NAME("UiNumberDescFormat"));
+    auto numberAttr = devAttrSet.find(ATTR_WITH_NAME("UiNumber"));
     if (descAttr != devAttrSet.end() && numberAttr != devAttrSet.end())
     {
         char c[4096] = { '\0' };
@@ -464,7 +464,7 @@ cdi::attr::AttributeSet getDeviceAttributeSet(HDEVINFO devs, SP_DEVINFO_DATA dev
     addDeviceConfigurationAndResources(devAttrSet, devInfo.DevInst);
 
     // Get service information from the registry
-    auto service = devAttrSet.find(ATTRWITHNAME("Service"));
+    auto service = devAttrSet.find(ATTR_WITH_NAME("Service"));
     if (service != devAttrSet.end())
     {
         std::string subKey = REGISTRY_SERVICES + service->getValue<std::string>();
@@ -563,16 +563,16 @@ void addOtherDevNodeProperties(cdi::attr::AttributeSet &attributeSet, DEVINST de
             modifiedKey = key.substr(underscoreLoc);
         }
 
-        if (attributeSet.find(ATTRWITHNAME(modifiedKey)) == attributeSet.end())
+        if (attributeSet.find(ATTR_WITH_NAME(modifiedKey)) == attributeSet.end())
         {
             attributeSet.insert(cdi::attr::Attribute(propertyBuffer, propertyBufferSize, modifiedKey, key, value));
         }
         else // the modified key is in the map already. If it's value matches this one don't add.
              // If the value doesn't match add this value under the original (non-modified) key
         {
-            if (cdi::strings::toUpper(std::string(attributeSet.find(ATTRWITHNAME(modifiedKey))->getValue<std::string>())) != cdi::strings::toUpper(std::string(value)))
+            if (cdi::strings::toUpper(std::string(attributeSet.find(ATTR_WITH_NAME(modifiedKey))->getValue<std::string>())) != cdi::strings::toUpper(std::string(value)))
             {
-                cdi::attr::Attribute newAttr = cdi::attr::Attribute(*attributeSet.find(ATTRWITHNAME(modifiedKey)), "\n" + value);
+                cdi::attr::Attribute newAttr = cdi::attr::Attribute(*attributeSet.find(ATTR_WITH_NAME(modifiedKey)), "\n" + value);
                 replaceInAttributeSet(attributeSet, newAttr);
             }
 
@@ -632,7 +632,7 @@ void addDeviceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet, D
             std::string resourceTypeAsStringWithNumber = resourceTypeAsString + "0";
             std::string resourceAsString = cdi::strings::resourceToString(buffer, bufferSize, resourceType);
 
-            while (attributeSet.find(ATTRWITHNAME(resourceTypeAsStringWithNumber)) != attributeSet.end())
+            while (attributeSet.find(ATTR_WITH_NAME(resourceTypeAsStringWithNumber)) != attributeSet.end())
             {
                 int endNum = atoi(resourceTypeAsStringWithNumber.substr(resourceTypeAsString.size()).c_str());
                 endNum++;
@@ -669,7 +669,7 @@ void addDeviceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet, D
 void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet)
 {
     // Make sure we have an interface path
-    auto itr = attributeSet.find(ATTRWITHNAME("DevicePath"));
+    auto itr = attributeSet.find(ATTR_WITH_NAME("DevicePath"));
     if (itr == attributeSet.end())
     {
         return;
@@ -721,16 +721,16 @@ void addInterfaceConfigurationAndResources(cdi::attr::AttributeSet &attributeSet
             modifiedKey = key.substr(underscoreLoc);
         }
 
-        if (attributeSet.find(ATTRWITHNAME(modifiedKey)) == attributeSet.end())
+        if (attributeSet.find(ATTR_WITH_NAME(modifiedKey)) == attributeSet.end())
         {
             attributeSet.insert(cdi::attr::Attribute(propertyBuffer, propertyBufferSize, modifiedKey, key, value));
         }
         else // the modified key is in the Set already. If it's value matches this one don't add.
              // If the value doesn't match add this value under the original (non-modified) key
         {
-            if (cdi::strings::toUpper(std::string(attributeSet.find(ATTRWITHNAME(modifiedKey))->getValue<std::string>())) != cdi::strings::toUpper(std::string(value)))
+            if (cdi::strings::toUpper(std::string(attributeSet.find(ATTR_WITH_NAME(modifiedKey))->getValue<std::string>())) != cdi::strings::toUpper(std::string(value)))
             {
-                cdi::attr::Attribute newAttr = cdi::attr::Attribute(*attributeSet.find(ATTRWITHNAME(modifiedKey)), "\n" + value);
+                cdi::attr::Attribute newAttr = cdi::attr::Attribute(*attributeSet.find(ATTR_WITH_NAME(modifiedKey)), "\n" + value);
                 replaceInAttributeSet(attributeSet, newAttr);
             }
         }
@@ -1247,7 +1247,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
 
             devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageReadCapacity->NumberOfBlocks.QuadPart, sizeof(LARGE_INTEGER), "NumberOfBlocks", "The number of blocks on the storage disk.", std::to_string(storageReadCapacity->NumberOfBlocks.QuadPart)));
 
-            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageReadCapacity->DiskLength.QuadPart, sizeof(LARGE_INTEGER), "DiskLength", "The size of the storage disk in bytes.", std::to_string(storageReadCapacity->DiskLength.QuadPart)));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&storageReadCapacity->DiskLength.QuadPart, sizeof(LARGE_INTEGER), "DiskLength", "The size of the storage disk in bytes.", cdi::strings::diskLengthToString(storageReadCapacity->DiskLength.QuadPart)));
         }
 
         // Get storage unique identifier
@@ -1373,8 +1373,7 @@ cdi::attr::AttributeSet getAttributeSetFromDevicePath(std::string DevicePath, st
         PDISK_GEOMETRY_EX diskGeoEx = (PDISK_GEOMETRY_EX)b;
         if (DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, NULL, diskGeoEx, sizeof(DISK_GEOMETRY_EX), &bytesReturned, NULL) && bytesReturned > 0)
         {
-            std::string DiskLength = std::to_string(diskGeoEx->DiskSize.QuadPart) + " Bytes" + " (" + std::to_string(diskGeoEx->DiskSize.QuadPart / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
-            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&diskGeoEx->DiskSize.QuadPart, sizeof(ULONGLONG), "DiskLength", "The size of the disk in bytes.", DiskLength));
+            devAttrSet.insert(cdi::attr::Attribute((BYTE*)&diskGeoEx->DiskSize.QuadPart, sizeof(ULONGLONG), "DiskLength", "The size of the disk in bytes.", cdi::strings::diskLengthToString(diskGeoEx->DiskSize.QuadPart)));
         }
 
         // Gets the capabilities of the USB hub

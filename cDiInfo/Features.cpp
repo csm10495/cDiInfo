@@ -148,7 +148,7 @@ namespace cdi
             cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
             for (auto &deviceAttrSet : devicesAttributeSet)
             {
-                auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+                auto itr = deviceAttrSet.find(ATTR_WITH_NAME(key));
                 if (itr != deviceAttrSet.end())
                 {
                     if (cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
@@ -174,7 +174,7 @@ namespace cdi
                 cdi::attr::AttributeSet inAS;
 
                 // make sure this attribute Set has the key... if not continue
-                auto itr = attributeSet.find(ATTRWITHNAME(key));
+                auto itr = attributeSet.find(ATTR_WITH_NAME(key));
                 if (itr != attributeSet.end())
                 {
                     if (cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
@@ -216,7 +216,7 @@ namespace cdi
             cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
             for (auto &deviceAttrSet : devicesAttributeSet)
             {
-                auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+                auto itr = deviceAttrSet.find(ATTR_WITH_NAME(key));
                 if (itr != deviceAttrSet.end())
                 {
                     if (!cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))
@@ -237,7 +237,7 @@ namespace cdi
             cdi::attr::AttributeSet deviceAttrSet = getAttributeSetWith(key, value);
             if (!deviceAttrSet.empty())
             {
-                PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrSet.find(ATTRWITHNAME(DEVINFO_DATA_STRING))->getValue<BYTE*>();
+                PSP_DEVINFO_DATA pDevInfoData = (PSP_DEVINFO_DATA)deviceAttrSet.find(ATTR_WITH_NAME(DEVINFO_DATA_STRING))->getValue<BYTE*>();
                 return pDevInfoData->DevInst;
             }
             return NULL;
@@ -248,7 +248,7 @@ namespace cdi
             cdi::attr::AttributeSetVector devicesAttributeSet = getAllDevicesAttributeSet();
             for (auto &deviceAttrSet : devicesAttributeSet)
             {
-                auto itr = deviceAttrSet.find(ATTRWITHNAME(key));
+                auto itr = deviceAttrSet.find(ATTR_WITH_NAME(key));
                 if (itr != deviceAttrSet.end())
                 {
                     if (cdi::strings::wildcardMatch(itr->getValue<std::string>(), value, FALSE))

@@ -249,14 +249,21 @@ namespace cdi
 
                                                 // Byte per (logical) sector
                                                 DWORD wordsPerLogicalSector = *(DWORD*)&identifyDevice->WordsPerLogicalSector;
+                                                DWORD blockSize = DEFAULT_SECTOR_SIZE;
                                                 if ((wordsPerLogicalSector >> 12) & 1) // shall be valid when bit 12 is set to 1
                                                 {
-                                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&wordsPerLogicalSector, sizeof(DWORD), "BytesPerSector", "The number of bytes in a sector on the specified volume. This value was translated from Words in the ATA Identify Device response block. ", std::to_string(wordsPerLogicalSector * sizeof(WORD))));
+                                                    blockSize = wordsPerLogicalSector * sizeof(WORD);
+                                                    raidDrive.insert(cdi::attr::Attribute((BYTE*)&wordsPerLogicalSector, sizeof(DWORD), "BytesPerSector", "The number of bytes in a sector on the specified volume. This value was translated from Words in the ATA Identify Device response block. ", std::to_string(blockSize)));
                                                 }
                                                 else
                                                 {
                                                     raidDrive.insert(cdi::attr::Attribute((BYTE*)&wordsPerLogicalSector, sizeof(DWORD), "BytesPerSector", "The number of bytes in a sector on the specified volume. This value was translated from Words in the ATA Identify Device response block. ", std::to_string(DEFAULT_SECTOR_SIZE)));
                                                 }
+
+                                                // Get size of the drive...
+                                                UINT64 diskLength = (*(UINT64*)&identifyDevice->Max48BitLBA * blockSize);
+                                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&diskLength, sizeof(diskLength), "DiskLength", "The size of the disk in bytes.", cdi::strings::diskLengthToString(diskLength)));
+                                                raidDrive.insert(cdi::attr::Attribute((BYTE*)&identifyDevice->Max48BitLBA, sizeof(UINT64), "NumberOfBlocks", "The number of blocks on the storage disk.", std::to_string(*(UINT64*)&identifyDevice->Max48BitLBA)));
                                             }
                                         }
 

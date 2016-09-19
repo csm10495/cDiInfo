@@ -177,5 +177,8 @@ namespace cdi
 
         // Wildcard matching
         bool wildcardMatch(std::string base, std::string expression, bool caseSensitive);
+
+        // Disk length to string
+        std::string diskLengthToString(UINT64 lengthInBytes);
     }
 }

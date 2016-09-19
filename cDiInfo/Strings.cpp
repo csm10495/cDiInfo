@@ -20,6 +20,9 @@
 // Used for buffer with 0 length
 #define ZERO_LENGTH_BUFFER "<Zero Length buffer>"
 
+// For Drive size conversion
+#define BYTES_IN_GIGABYTE 1073741824
+
 // Need to synchronize on SymMatchString
 std::mutex symMatchMutex;
 
@@ -3033,6 +3036,11 @@ namespace cdi
             std::lock_guard<std::mutex> lock(symMatchMutex);
             return SymMatchString(base.c_str(), expression.c_str(), caseSensitive) == TRUE;
             // auto release lock...
+        }
+
+        std::string diskLengthToString(UINT64 lengthInBytes)
+        {
+            return std::to_string(lengthInBytes) + " Bytes" + " (" + std::to_string(lengthInBytes / (double)BYTES_IN_GIGABYTE) + " Gigabytes)";
         }
     }
 }

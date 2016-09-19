@@ -13,6 +13,9 @@
 #include <set>
 #include <vector>
 
+// Used to get an attribute with a specific name
+#define ATTR_WITH_NAME(name) cdi::attr::Attribute(NULL, 0, name, "", "")
+
 namespace cdi
 {
     namespace attr

@@ -69,8 +69,6 @@ typedef std::map<std::string, std::string> AttributeMap;
 // Used to map a DeviceId to a SCSI Port
 typedef std::map<std::string, UINT16> DeviceIdToScsiPortMap;
 
-// For Drive size conversion
-#define BYTES_IN_GIGABYTE 1073741824
 // Used to designate that we couldn't get this attribute
 #define UNAVAILABLE_ATTRIBUTE "<Attribute Unavailable>"
 // Used to designate an inability to find children
@@ -88,8 +86,6 @@ typedef std::map<std::string, UINT16> DeviceIdToScsiPortMap;
 #define SYSTEM_ROOT2 "System32"
 // Here to avoid warnings from importing ntddser.h
 #define IOCTL_SERIAL_GET_COMMSTATUS	0x1b006c
-
-#define ATTRWITHNAME(name) cdi::attr::Attribute(NULL, 0, name, "", "")
 
 // Get an HDEVINFO for all classes 
 HDEVINFO getAllClassesHDevInfo();
