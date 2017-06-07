@@ -319,7 +319,7 @@ namespace cdi
 
                 if (DeviceIoControl(handle, IOCTL_SCSI_MINIPORT, &buffer, sizeof(buffer), &buffer, sizeof(buffer), &bytesReturned, NULL) && bytesReturned > 0 && driverInfo->IoctlHeader.ReturnCode == CSMI_SAS_STATUS_SUCCESS)
                 {
-                    attributeSet.insert(cdi::attr::Attribute((BYTE*)&controllerConfig->Configuration.uBoardID, sizeof(controllerConfig->Configuration.uBoardID), "SubsystemId", "32-bit subsystem ID from the controller’s PCI configuration space.Bits 0 – 15 contain the subsystem vendor ID and bits 16 – 31 contain the subsystem ID as defined by the PCI specification.", std::to_string(controllerConfig->Configuration.uBoardID)));
+                    attributeSet.insert(cdi::attr::Attribute((BYTE*)&controllerConfig->Configuration.uBoardID, sizeof(controllerConfig->Configuration.uBoardID), "SubsystemId", "32-bit subsystem ID from the controller's PCI configuration space. Bits 0 - 15 contain the subsystem vendor ID and bits 16 - 31 contain the subsystem ID as defined by the PCI specification.", std::to_string(controllerConfig->Configuration.uBoardID)));
 
                     if (controllerConfig->Configuration.usSlotNumber != SLOT_NUMBER_UNKNOWN)
                     {

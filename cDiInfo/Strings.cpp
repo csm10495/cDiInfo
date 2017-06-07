@@ -2721,6 +2721,10 @@ namespace cdi
                 {
                     retStr += "&amp;";
                 }
+                else if (inChar == 0)
+                {
+                    // Don't do anything. NULL char... really bad for xml
+                }
                 else
                 {
                     retStr += inChar;
